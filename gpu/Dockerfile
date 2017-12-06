@@ -24,13 +24,13 @@ RUN apt-get update \
     libblas-dev \
     libbz2-1.0 \
     libcurl3 \
-    libicu57 \
-    libjpeg62-turbo \
+    libicu-dev \
+    libjpeg-dev \
     libopenblas-dev \
     libpangocairo-1.0-0 \
     libpcre3 \
-    libpng16-16 \
-    libreadline7 \
+    libpng-dev \
+    libreadline-dev \
     libtiff5 \
     liblzma5 \
     locales \
@@ -47,11 +47,7 @@ RUN apt-get update \
     libcairo2-dev \
     libcurl4-openssl-dev \
     libpango1.0-dev \
-    libjpeg-dev \
-    libicu-dev \
     libpcre3-dev \
-    libpng-dev \
-    libreadline-dev \
     libtiff5-dev \
     liblzma-dev \
     libx11-dev \
