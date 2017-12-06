@@ -1,4 +1,8 @@
-FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
+
+
+ENV LD_LIBRARY_PATH /usr/local/cuda/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+
 
 LABEL org.label-schema.license="GPL-2.0" \
       org.label-schema.vcs-url="https://github.com/rocker-org/rocker-versioned" \
@@ -130,16 +134,23 @@ RUN apt-get update \
 
 CMD ["R"]
 
-####### Add ML libraries ####
+ENV VENV_DIR /srv/venv
 
-RUN apt-get update && apt-get -y install \
-    python-virtualenv \
-    python-pip && \
-    pip install h5py pyyaml requests Pillow scipy && \
+RUN apt-get update && \
+    apt-get -y install python3-venv python3-dev && \
+    apt-get purge && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create a venv dir owned by unprivileged user & set up notebook in it
+# This allows non-root to install python libraries if required
+RUN mkdir -p ${VENV_DIR} 
+
+RUN python3 -m venv ${VENV_DIR} && \
+    # Explicitly install a new enough version of pip
+    pip3 install pip==9.0.1 && \
+    pip3 install h5py pyyaml requests Pillow scipy && \
     install2.r --error keras && \
     R -e "keras::install_keras(tensorflow='gpu')"
-
-
-
 
 
