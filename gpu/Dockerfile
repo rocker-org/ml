@@ -1,156 +1,21 @@
-FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
+FROM nvidia/cuda:8.0-cudnn6-runtime
 
+RUN apt-get update -q && apt-get upgrade -y -q
 
-ENV LD_LIBRARY_PATH /usr/local/cuda/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+## R installation
+RUN sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" >> /etc/apt/sources.list'
+RUN gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
+RUN gpg -a --export E084DAB9 | apt-key add -
+RUN apt-get update
+RUN apt-get install -y r-base r-base-dev libxml2-dev libxt-dev libssl-dev libcurl4-openssl-dev imagemagick
 
+## Python dependencies
+RUN apt-get update && apt-get -y upgrade
+RUN apt-get install python-pip python-virtualenv -y
+RUN pip install virtualenv
 
-LABEL org.label-schema.license="GPL-2.0" \
-      org.label-schema.vcs-url="https://github.com/rocker-org/rocker-versioned" \
-      org.label-schema.vendor="Rocker Project" \
-      maintainer="Carl Boettiger <cboettig@ropensci.org>"
-
-ARG R_VERSION
-ARG BUILD_DATE
-ENV R_VERSION=${R_VERSION:-3.4.3} \
-    LC_ALL=en_US.UTF-8 \
-    LANG=en_US.UTF-8 \
-    TERM=xterm
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    bash-completion \
-    ca-certificates \
-    file \
-    fonts-texgyre \
-    g++ \
-    gfortran \
-    gsfonts \
-    libblas-dev \
-    libbz2-1.0 \
-    libcurl3 \
-    libicu-dev \
-    libjpeg-dev \
-    libopenblas-dev \
-    libpangocairo-1.0-0 \
-    libpcre3 \
-    libpng-dev \
-    libreadline-dev \
-    libtiff5 \
-    liblzma5 \
-    locales \
-    make \
-    unzip \
-    zip \
-    zlib1g \
-  && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
-  && locale-gen en_US.utf8 \
-  && /usr/sbin/update-locale LANG=en_US.UTF-8 \
-  && BUILDDEPS="curl \
-    default-jdk \
-    libbz2-dev \
-    libcairo2-dev \
-    libcurl4-openssl-dev \
-    libpango1.0-dev \
-    libpcre3-dev \
-    libtiff5-dev \
-    liblzma-dev \
-    libx11-dev \
-    libxt-dev \
-    perl \
-    tcl8.6-dev \
-    tk8.6-dev \
-    texinfo \
-    texlive-extra-utils \
-    texlive-fonts-recommended \
-    texlive-fonts-extra \
-    texlive-latex-recommended \
-    x11proto-core-dev \
-    xauth \
-    xfonts-base \
-    xvfb \
-    zlib1g-dev" \
-  && apt-get install -y --no-install-recommends $BUILDDEPS \
-  && cd tmp/ \
-  ## Download source code
-  && curl -O https://cran.r-project.org/src/base/R-3/R-${R_VERSION}.tar.gz \
-  ## Extract source code
-  && tar -xf R-${R_VERSION}.tar.gz \
-  && cd R-${R_VERSION} \
-  ## Set compiler flags
-  && R_PAPERSIZE=letter \
-    R_BATCHSAVE="--no-save --no-restore" \
-    R_BROWSER=xdg-open \
-    PAGER=/usr/bin/pager \
-    PERL=/usr/bin/perl \
-    R_UNZIPCMD=/usr/bin/unzip \
-    R_ZIPCMD=/usr/bin/zip \
-    R_PRINTCMD=/usr/bin/lpr \
-    LIBnn=lib \
-    AWK=/usr/bin/awk \
-    CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g" \
-    CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g" \
-  ## Configure options
-  ./configure --enable-R-shlib \
-               --enable-memory-profiling \
-               --with-readline \
-               --with-blas \
-               --with-tcltk \
-               --disable-nls \
-               --without-recommended-packages \
-  ## Build and install
-  && make \
-  && make install \
-  ## Add a default CRAN mirror
-  && echo "options(repos = c(CRAN = 'https://cran.rstudio.com/'), download.file.method = 'libcurl')" >> /usr/local/lib/R/etc/Rprofile.site \
-  ## Add a library directory (for user-installed packages)
-  && mkdir -p /usr/local/lib/R/site-library \
-  && chown root:staff /usr/local/lib/R/site-library \
-  && chmod g+wx /usr/local/lib/R/site-library \
-  ## Fix library path
-  && echo "R_LIBS_USER='/usr/local/lib/R/site-library'" >> /usr/local/lib/R/etc/Renviron \
-  && echo "R_LIBS=\${R_LIBS-'/usr/local/lib/R/site-library:/usr/local/lib/R/library:/usr/lib/R/library'}" >> /usr/local/lib/R/etc/Renviron \
-  ## install packages from date-locked MRAN snapshot of CRAN
-  && [ -z "$BUILD_DATE" ] && BUILD_DATE=$(TZ="America/Los_Angeles" date -I) || true \
-  && MRAN=https://mran.microsoft.com/snapshot/${BUILD_DATE} \
-  && echo MRAN=$MRAN >> /etc/environment \
-  && export MRAN=$MRAN \
-  ## MRAN becomes default only in versioned images
-  ## Use littler installation scripts
-  && Rscript -e "install.packages(c('littler', 'docopt'), repo = '$MRAN')" \
-  && ln -s /usr/local/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r \
-  && ln -s /usr/local/lib/R/site-library/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
-  && ln -s /usr/local/lib/R/site-library/littler/bin/r /usr/local/bin/r \
-  ## TEMPORARY WORKAROUND to get more robust error handling for install2.r prior to littler update
-  && curl -O /usr/local/bin/install2.r https://github.com/eddelbuettel/littler/raw/master/inst/examples/install2.r \
-  && chmod +x /usr/local/bin/install2.r \
-  ## Clean up from R source install
-  && cd / \
-  && rm -rf /tmp/* \
-  && apt-get remove --purge -y $BUILDDEPS \
-  && apt-get autoremove -y \
-  && apt-get autoclean -y \
-  && rm -rf /var/lib/apt/lists/*
-
-
-CMD ["R"]
-
-ENV VENV_DIR /srv/venv
-
-RUN apt-get update && \
-    apt-get -y install python3-venv python3-dev && \
-    apt-get purge && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Create a venv dir owned by unprivileged user & set up notebook in it
-# This allows non-root to install python libraries if required
-RUN mkdir -p ${VENV_DIR} 
-
-RUN python3 -m venv ${VENV_DIR} && \
-    # Explicitly install a new enough version of pip
-    pip3 install pip==9.0.1 && \
-    pip3 install h5py pyyaml requests Pillow scipy && \
-    install2.r --error keras && \
-    R -e "keras::install_keras(tensorflow='gpu')"
-
-
+## R packages
+RUN R -e "install.packages('devtools', repos = 'https://cloud.r-project.org')"
+RUN R -e "devtools::install_github('rstudio/tensorflow')"
+RUN R -e "devtools::install_github('rstudio/keras')"
+RUN R -e "keras::install_keras(tensorflow = 'gpu')"
