@@ -28,6 +28,7 @@ RUN apt-get update \
            libcurl4-openssl-dev \
            imagemagick \
            python-pip \
+           libpython2.7 \
     && pip install --upgrade pip \
     && pip install virtualenv \
     && echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' >> /etc/R/Rprofile.site \
