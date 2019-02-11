@@ -1,4 +1,4 @@
-tidyverse-gpu
+gpu
 =============
 
 A Docker image based on [rocker/tidyverse](https://github.com/rocker-org/rocker-versioned) including GPU support via CUDA. Based on [work](zhttps://github.com/ecohealthalliance/reservoir/blob/master/Dockerfile.gpu) done by [Noam Ross](https://github.com/noamross) and extended by [Sam Abbott](https://github.com/seabbs). The Docker image contains `xgboost` built for GPU's in both R and Python as well as the latest stable release of `h2o`. If you wanted to use a different version of CUDA to the one currently installed then changethe relevant environment variables in the `Dockerfile` and rebuild the image.
@@ -11,18 +11,18 @@ Use as [rocker/tidyverse](https://github.com/rocker-org/rocker-versioned) but re
 -   Pull/Build
 
 ``` bash
-docker pull rocker/ml:tidyverse-gpu
+docker pull rocker/gpu
 ## Or build 
 ## Clone repo and navigate into the repo in the terminal
-docker build . -t tidyverse-gpu
+docker build . -t gpu
 ```
 
 -   Run
 
 ``` bash
-nvidia-docker run -d -p 8787:8787 -e USER=tidyverse-gpu -e PASSWORD=tidyverse-gpu --name tidyverse-gpu rocker/ml:tidyverse-gpu
+nvidia-docker run -d -p 8787:8787 -e USER=gpu -e PASSWORD=gpu --name gpu rocker/gpu
 ## Or build 
-nvidia-docker run -d -p 8787:8787 -e USER=tidyverse-gpu -e PASSWORD=tidyverse-gpu --name tidyverse-gpu tidyverse-gpu
+nvidia-docker run -d -p 8787:8787 -e USER=gpu -e PASSWORD=gpu --name gpu gpu
 ```
 
 -   Login: Go to `localhost:8787` and sign in using the password and username given with the `docker run` command
