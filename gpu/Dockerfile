@@ -10,8 +10,9 @@ RUN apt-get update && apt-get install -y \
   cmake \ 
   gnupg \
   libcurl4-openssl-dev \
-  libncurses5-dev
+  libncurses5-dev \
   libopenmpi-dev \ 
+## Consider migrating these to python-3
   python-pip \
   python-setuptools \
   python-dev
@@ -74,8 +75,11 @@ RUN git clone --recursive https://github.com/dmlc/xgboost \
 RUN Rscript -e 'install.packages("h2o", type="source", repos="http://h2o-release.s3.amazonaws.com/h2o/latest_stable_R")'
 
 
-## Keras
-RUN pip install h5py pyyaml requests Pillow tensorflow-gpu keras --no-cache-dir \
-  && install2.r keras
+## Install Keras
+## note: virtualenv pulls in python3, not 2.7
+RUN apt-get update && apt-get -y install virtualenv \
+## pip install h5py pyyaml requests Pillow tensorflow-gpu keras --no-cache-dir \
+  && install2.r keras \
+  && R -e "keras::install_keras(tensorflow='gpu')"
 
 
