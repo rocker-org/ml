@@ -3,6 +3,7 @@ FROM rocker/cuda:9.0
 ## Python 
 RUN apt-get update -qq \
   && apt-get -y --no-install-recommends install \
+    python3-dev \
     python3-setuptools \
     python3-pip
 
