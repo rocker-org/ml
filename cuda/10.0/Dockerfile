@@ -1,4 +1,4 @@
-FROM rocker/tidyverse:3.5.2
+FROM rocker/tidyverse:3.5.1
 
 ########## base ###############################################
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 curl ca-certificates && \

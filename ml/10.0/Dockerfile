@@ -1,4 +1,4 @@
-FROM rocker/cuda-9.0
+FROM rocker/gpu:cuda10.0-R3.5.1
 
 ## Python
 RUN apt-get update -qq \
