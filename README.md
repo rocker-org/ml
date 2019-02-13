@@ -11,7 +11,7 @@ Use as [rocker/tidyverse](https://github.com/rocker-org/rocker-versioned) but re
 -   Pull/Build
 
 ``` bash
-docker pull rocker/gpu
+docker pull rocker/ml
 ## Or build 
 ## Clone repo and navigate into the repo in the terminal
 docker build . -t gpu
@@ -20,7 +20,7 @@ docker build . -t gpu
 -   Run
 
 ``` bash
-nvidia-docker run -d -p 8787:8787 -e USER=gpu -e PASSWORD=gpu --name gpu rocker/gpu
+nvidia-docker run -d -p 8787:8787 -e USER=gpu -e PASSWORD=gpu --name gpu rocker/ml
 ## Or build 
 nvidia-docker run -d -p 8787:8787 -e USER=gpu -e PASSWORD=gpu --name gpu gpu
 ```

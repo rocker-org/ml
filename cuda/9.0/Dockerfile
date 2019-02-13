@@ -1,9 +1,11 @@
 FROM rocker/tidyverse:latest
 
-## Adapted from nvidia/cuda:9.0-base-ubuntu16.04
+
+#### cuda base ##########
+
+## Adapted from nvidia/cuda:9.0-base (A ubuntu16.04-based image)
 ## Sources at https://gitlab.com/nvidia/cuda/blob/ubuntu16.04/9.0/runtime/Dockerfile
 ## Commit f7625b4242bb8206fc1f76a321efae930a7f3554
-
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates apt-transport-https gnupg2 curl dirmngr && \
     rm -rf /var/lib/apt/lists/* && \
 #    NVIDIA_GPGKEY_SUM=d1be581509378368edeec8c1eb2958702feedf3bc3d17011adbf24efacce4ab5 && \
@@ -15,7 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
 
 ENV CUDA_VERSION 9.0.176
-
 ENV CUDA_PKG_VERSION 9-0=$CUDA_VERSION-1
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-cudart-$CUDA_PKG_VERSION && \
@@ -37,7 +38,8 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV NVIDIA_REQUIRE_CUDA "cuda>=9.0"
 
-## Adapted from nvidia/cuda:9.0-runtime-ubuntu16.04
+######### runtime ########
+## Adapted from nvidia/cuda:9.0-runtime
 ## Sources at https://gitlab.com/nvidia/cuda/blob/ubuntu16.04/9.0/runtime/Dockerfile
 ENV NCCL_VERSION 2.4.2
 
@@ -48,13 +50,47 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-mark hold libnccl2 && \
     rm -rf /var/lib/apt/lists/*
 
-## Adapted from nvidia/cuda:9.0-cudnn7-ubuntu16.04
+
+####### cudnn7 ##########
+## Adapted from nvidia/cuda:9.0-cudnn7
 ## Sources at https://gitlab.com/nvidia/cuda/blob/ubuntu16.04/9.0/runtime/cudnn7/Dockerfile
 ENV CUDNN_VERSION 7.4.2.24
 LABEL com.nvidia.cudnn.version="${CUDNN_VERSION}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
             libcudnn7=$CUDNN_VERSION-1+cuda9.0 && \
+    apt-mark hold libcudnn7 && \
+    rm -rf /var/lib/apt/lists/*
+
+### NOTE: CUDA devel libraries are large and not needed for tensorflow
+### These are needed to compile xgboost from source, but should probably
+### be removed from a multistage build
+
+
+###### cuda devel #########
+## Adapted from nvidia/cuda:9.0-devel
+## https://gitlab.com/nvidia/cuda/blob/ubuntu16.04/9.0/devel/Dockerfile
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cuda-libraries-dev-$CUDA_PKG_VERSION \
+        cuda-nvml-dev-$CUDA_PKG_VERSION \
+        cuda-minimal-build-$CUDA_PKG_VERSION \
+        cuda-command-line-tools-$CUDA_PKG_VERSION \
+        cuda-core-9-0=9.0.176.3-1 \
+        cuda-cublas-dev-9-0=9.0.176.4-1 \
+        libnccl-dev=$NCCL_VERSION-1+cuda9.0 && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LIBRARY_PATH /usr/local/cuda/lib64/stubs
+
+#### cudnn7-devel ##########
+## Adapted from nvidia/cuda:9.0-cudnn7-devel
+## https://gitlab.com/nvidia/cuda/blob/ubuntu16.04/9.0/devel/cudnn7/Dockerfile
+ENV CUDNN_VERSION 7.4.2.24
+LABEL com.nvidia.cudnn.version="${CUDNN_VERSION}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            libcudnn7=$CUDNN_VERSION-1+cuda9.0 \
+            libcudnn7-dev=$CUDNN_VERSION-1+cuda9.0 && \
     apt-mark hold libcudnn7 && \
     rm -rf /var/lib/apt/lists/*
 
