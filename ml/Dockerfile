@@ -1,6 +1,6 @@
-FROM rocker/cuda:9.0
+FROM rocker/cuda-9.0
 
-## Python 
+## Python
 RUN apt-get update -qq \
   && apt-get -y --no-install-recommends install \
     python3-dev \
@@ -24,14 +24,6 @@ RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserv
          \nCUDA_PATH=$CUDA_PATH \
          \nPATH=$PATH" >> /usr/local/lib/R/etc/Renviron
 
-## CUDA Version
-#ENV CUDA_MAJOR_VERSION=9.0
-#ENV CUDA_MAJOR_VERSION_HYP=9.0
-#ENV CUDA_MINOR_VERSION=9.0.176
-#ENV NVIDIA_VISIBLE_DEVICES=all
-#ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility 
-
-
 # Python Xgboost for CPU
 RUN pip3 install wheel setuptools scipy --upgrade
 RUN pip3 install xgboost
@@ -43,7 +35,7 @@ RUN apt-get update && apt-get -y install cmake \
   && git clone --recursive https://github.com/dmlc/xgboost \
   && mkdir -p xgboost/build && cd xgboost/build \
   && cmake .. -DUSE_CUDA=ON -DR_LIB=ON \
-  && make install -j$(nproc) 
+  && make install -j$(nproc)
 
 ## Get Java (for h2o R package)
 RUN apt-get update -qq \
