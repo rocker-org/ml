@@ -1,36 +1,58 @@
+FROM rocker/cuda:9.0
 
-## Based on work by https://github.com/rocker-org/rocker/issues/273
-## and particularly https://github.com/rocker-org/rocker/issues/273#issuecomment-349814504
-##
-## Based on Ubuntu 16.04 
+## Python 
+RUN apt-get update -qq \
+  && apt-get -y --no-install-recommends install \
+    python3-setuptools \
+    python3-pip
 
-FROM nvidia/cuda:8.0-cudnn6-runtime
+## Install Keras
+RUN pip3 install h5py pyyaml requests Pillow tensorflow-gpu keras --no-cache-dir \
+  && install2.r keras
+
+ENV CUDA_HOME=/usr/local/cuda
+ENV CUDA_PATH=/usr/local/cuda
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+
+# Set up env variables in R
+RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserver.conf \
+  && echo "Sys.setenv(TENSORFLOW_PYTHON=\"/usr/bin/python3\"); CUDA_HOME=\"$CUDA_HOME\"); Sys.setenv(CUDA_PATH=\"$CUDA_PATH\"); Sys.setenv(PATH=\"$PATH\")" | tee -a /usr/local/lib/R/etc/Rprofile.site
 
 
-## This handle reaches Carl and Dirk
-MAINTAINER "Carl Boettiger and Dirk Eddelbuettel" rocker-maintainers@eddelbuettel.com
+
+## CUDA Version
+ENV CUDA_MAJOR_VERSION=9.0
+ENV CUDA_MAJOR_VERSION_HYP=9.0
+ENV CUDA_MINOR_VERSION=9.0.176
+
+RUN ls /usr/local/cuda-${CUDA_MAJOR_VERSION}/targets/x86_64-linux/lib/* | xargs -I{} ln -s {} /usr/lib/x86_64-linux-gnu/ \
+  && ln -s libcuda.so /usr/lib/x86_64-linux-gnu/libcuda.so.1 \
+  && ln -s libnvidia-ml.so /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1
+
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility 
 
 
-## Prepare R installation from 
-RUN sh -c 'echo "deb http://cloud.r-project.org/bin/linux/ubuntu xenial/" >> /etc/apt/sources.list' \
-    && gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 \
-    && gpg -a --export E084DAB9 | apt-key add -
+## Get Java
+#RUN apt-get update -qq \
+#  && apt-get -y --no-install-recommends install \
+#    cmake \
+#    default-jdk \
+#    default-jre \
+#    python3-pip \
+#  && R CMD javareconf
 
-RUN apt-get update \
-    && apt-get upgrade -y -q \
-    && apt-get install -y --no-install-recommends \
-           r-base \
-           r-base-dev \
-           r-cran-littler \
-           libxml2-dev \
-           libxt-dev \
-           libssl-dev \
-           libcurl4-openssl-dev \
-           imagemagick \
-           python-pip \
-           libpython2.7 \
-    && python -m pip install --upgrade pip \
-    && pip install virtualenv \
-    && echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' >> /etc/R/Rprofile.site \
-    && /usr/lib/R/site-library/littler/examples/install.r tensorflow keras \
-    && r -e "keras::install_keras(tensorflow = '1.4.1-gpu')"
+# Python Xgboost for GPU
+#RUN pip3 install wheel setuptools scipy --upgrade
+#RUN pip3 install xgboost
+
+### R Xgboost
+#RUN git clone --recursive https://github.com/dmlc/xgboost \
+#  && mkdir -p xgboost/build && cd xgboost/build \
+#  && cmake .. -DUSE_CUDA=ON -DR_LIB=ON \
+#  && make install -j$(nproc) 
+
+## Get latest release of h2o
+#RUN Rscript -e 'install.packages("h2o", type="source", repos="http://h2o-release.s3.amazonaws.com/h2o/latest_stable_R")'
+
