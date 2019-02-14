@@ -1,4 +1,4 @@
-FROM rocker/tf:gpu
+FROM rocker/tf-gpu:3.5.2
 
 # Python Xgboost for CPU
 RUN pip3 install \
