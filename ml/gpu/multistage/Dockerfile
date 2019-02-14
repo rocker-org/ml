@@ -1,4 +1,4 @@
-FROM rocker/cuda-dev as builder
+FROM rocker/cuda-dev:3.5.2 as builder
 
 RUN apt-get install -y --no-install-recommends \
     wget cmake && \
