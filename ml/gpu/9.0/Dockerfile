@@ -1,4 +1,4 @@
-FROM rocker/gpu:cuda9.0-R3.5.2
+FROM rocker/tensorflow:gpu
 
 # Set up env variables in R
 ENV CUDA_HOME=/usr/local/cuda
