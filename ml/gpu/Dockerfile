@@ -1,12 +1,11 @@
-FROM rocker/cuda-dev:3.5.2 as builder
+FROM rocker/cuda-dev:3.5.2
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget cmake && \
     git clone --recursive https://github.com/dmlc/xgboost && \
     mkdir -p xgboost/build && cd xgboost/build && \
     cmake .. -DUSE_CUDA=ON -DR_LIB=ON && \
-    make install -j$(nproc) && \
-    install2.r xgboost
+    make install -j$(nproc)
 
 FROM rocker/tensorflow-gpu:3.5.2
 
@@ -24,10 +23,9 @@ RUN apt-get update && apt-get -y install wget && \
   apt-get remove --purge -y wget && \
   rm -rf /var/lib/apt/lists/*
 
+COPY --from=0 /usr/local/lib/R/site-library/xgboost /usr/local/lib/R/site-library/xgboost
 
-COPY --from=builder /usr/local/lib/R/site-library/xgboost /usr/local/lib/R/site-library/
-
-## Get Java (for h2o R package)
+# Get Java (for h2o R package)
 RUN apt-get update -qq && \
     apt-get -y --no-install-recommends install \
       default-jdk \
