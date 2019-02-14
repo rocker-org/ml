@@ -1,6 +1,6 @@
 FROM rocker/cuda-dev as builder
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget cmake && \
     git clone --recursive https://github.com/dmlc/xgboost && \
     mkdir -p xgboost/build && cd xgboost/build && \
@@ -17,20 +17,22 @@ RUN pip3 install \
     scipy==1.2.1 --upgrade
 
 ## xgboost with multi-GPU support
-RUN apt-get update && apt-get -y install wget \
-  && wget https://s3-us-west-2.amazonaws.com/xgboost-wheels/xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl \
-  && pip3 install  xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl \
-  && rm xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl
+RUN apt-get update && apt-get -y install wget && \
+  wget https://s3-us-west-2.amazonaws.com/xgboost-wheels/xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
+  pip3 install  xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
+  rm xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
+  apt-get remove --purge wget && \
+  rm -rf /var/lib/apt/lists/*
+
 
 COPY --from=builder /usr/local/lib/R/site-library/xgboost /usr/local/lib/R/site-library/
 
 ## Get Java (for h2o R package)
-RUN apt-get update -qq \
-  && apt-get -y --no-install-recommends install \
-    cmake \
-    default-jdk \
-    default-jre \
-  && R CMD javareconf
+RUN apt-get update -qq && \
+    apt-get -y --no-install-recommends install \
+      default-jdk \
+      default-jre && \
+  	R CMD javareconf
 
 ## h2o requires Java
 RUN install2.r h2o
