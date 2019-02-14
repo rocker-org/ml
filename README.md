@@ -1,45 +1,54 @@
-# rocker/cuda images
+# Rocker stack for Machine Learning in R 
+
+This repository contains images for machine learning and GPU-based computation
+in R.  
 
 
 
-`rocker/cuda-9.0`
-`rocker/cuda-10.0`
+
+The dependency stack looks like so: 
+
+```
+-| rocker/tidyverse
+  -| rocker/tensorflow
+    -| rocker/ml
+  -| rocker/cuda 
+    -| rocker/tensorflow-gpu
+      -| rocker/ml-gpu
+    -| rocker/cuda-dev
+```
 
 
-These Dockerfiles add the Nvidia CUDA libraries to the `rocker-versioned`
+Nvidia CUDA libraries to the `rocker-versioned`
 stack (building on `rocker/tidyverse`). 
 
-## Getting started
+## Quick start
 
-**CUDA images require nvidia-docker** runtime to run!  
+Begin with the `ml` or `ml-gpu` version for a batteries-included setup
+
+
+**Note: `gpu` images require nvidia-docker** runtime to run!  
 
 Run a bash shell or R command line:
 
 ```
-nvidia-docker run --rm -ti rocker/cuda-9.0 bash
-nvidia-docker run --rm -ti rocker/cuda-9.0 R
+docker run --rm -ti rocker/ml-gpu R
+nvidia-docker run --rm -ti rocker/ml-gpu R
 ```
 
 Or run in RStudio instance:
 
 ```
-nvidia-docker run -e PASSWORD=gpu -p 8787:8787 rocker/cuda-9.0
+docker run -e PASSWORD=mu -p 8787:8787 rocker/ml
+nvidia-docker run -e PASSWORD=mu -p 8787:8787 rocker/ml-gpu
 ```
 
 
+## Versioning
 
-## Context
-
-These images are inspire by and comparable to
-`nvidia/cuda:9.0-cuddn7-devel` and  `nvidia/cuda:10.0-cuddn7-devel`.
-The official NVIDIA cuda Dockerfiles break this into a stack of images:
-`base`, `runtime`, `devel`, and `cuddn7-devel`, building on `ubuntu16.04` and
-`ubuntu18.04`.  Including the devel libraries is only necessary for packages
-that must be compiled from source (such as xgboost with GPU support), and does
-make these images much larger than they would be otherwise.  The devel
-libraries are not needed for tensflow/keras GPU use in R, and may be separated
-out later on.
-
+GPU-based images are built with CUDA 9.0 (on `latest` / `3.5.2` tags, where
+tags track the current R release, as in the rest of the
+[rocker-versioned](https://github.com/rocker-org/rocker-versioned) stack).
 
 
 
