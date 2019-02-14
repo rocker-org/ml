@@ -21,7 +21,7 @@ RUN apt-get update && apt-get -y install wget && \
   wget https://s3-us-west-2.amazonaws.com/xgboost-wheels/xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
   pip3 install  xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
   rm xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
-  apt-get remove --purge wget && \
+  apt-get remove --purge -y wget && \
   rm -rf /var/lib/apt/lists/*
 
 
