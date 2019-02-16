@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget cmake && \
     git clone --recursive https://github.com/dmlc/xgboost && \
     mkdir -p xgboost/build && cd xgboost/build && \
-    cmake .. -DUSE_CUDA=ON -DR_LIB=ON && \
+    cmake .. -DUSE_CUDA=ON -DR_LIB=ON -DUSE_NCCL=ON && \
     make install -j$(nproc)
 
 FROM rocker/tensorflow-gpu:3.5.2
