@@ -62,3 +62,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 
+####### Set up env variables in R #######
+ENV CUDA_HOME=/usr/local/cuda
+ENV CUDA_PATH=/usr/local/cuda
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+
+RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserver.conf \
+  && echo "\n\
+         \nCUDA_HOME=$CUDA_HOME \
+         \nCUDA_PATH=$CUDA_PATH \
+         \nPATH=$PATH" >> /usr/local/lib/R/etc/Renviron
+         

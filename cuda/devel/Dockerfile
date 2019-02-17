@@ -27,3 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-mark hold libcudnn7 && \
     rm -rf /var/lib/apt/lists/*
 
+### required for linking OpenCL
+RUN mkdir -p /etc/OpenCL/vendors/ \
+  && echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd

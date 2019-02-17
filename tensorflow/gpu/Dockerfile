@@ -1,18 +1,6 @@
 FROM rocker/cuda:3.5.2
 
-# Set up env variables in R
-ENV CUDA_HOME=/usr/local/cuda
-ENV CUDA_PATH=/usr/local/cuda
-ENV PATH=$CUDA_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_PATH
-
-RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserver.conf \
-  && echo "\n\
-         \nTENSORFLOW_PYTHON=/usr/bin/python3 \
-         \nCUDA_HOME=$CUDA_HOME \
-         \nCUDA_PATH=$CUDA_PATH \
-         \nPATH=$PATH" >> /usr/local/lib/R/etc/Renviron
-
+RUN echo "\nTENSORFLOW_PYTHON=/usr/bin/python3 >> /usr/local/lib/R/etc/Renviron
 
 ## Python
 RUN apt-get update -qq \
