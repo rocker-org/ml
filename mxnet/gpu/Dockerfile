@@ -24,4 +24,14 @@ RUN git clone --recursive https://github.com/apache/incubator-mxnet.git \
 
 RUN cd incubator-mxnet \
   && make rpkg
-    
+
+FROM rocker/cuda:3.5.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
+    libopenblas-dev \
+    liblapack-dev \
+    libopencv-dev \
+    libxt-dev
+
+COPY --from=0 /usr/local/lib/R/site-library /usr/local/lib/R/site-library
+
