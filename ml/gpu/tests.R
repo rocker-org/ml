@@ -9,6 +9,11 @@ test <- agaricus.test
 # fit model
 bst <- xgboost(data = train$data, label = train$label, max_depth = 5, eta = 0.001, nrounds = 100,
                nthread = 2, objective = "binary:logistic", tree_method = "gpu_hist")
+
+# Test for multi-gpu support
+#bst <- xgboost(data = train$data, label = train$label, max_depth = 5, eta = 0.001, nrounds = 10000,
+#               nthread = 2, objective = "binary:logistic", tree_method = "gpu_hist", n_gpus=4)
+
 # predict
 pred <- predict(bst, test$data)
 
