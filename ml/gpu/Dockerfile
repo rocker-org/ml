@@ -13,7 +13,8 @@ FROM rocker/tensorflow-gpu:3.5.2
 RUN pip3 install \
     wheel==0.33.0 \
     setuptools==40.8.0 \
-    scipy==1.2.1 --upgrade
+    scipy==1.2.1 \
+    tensorflow-probability==0.5.0 --upgrade
 
 ## xgboost with multi-GPU support
 RUN apt-get update && apt-get -y install wget && \
