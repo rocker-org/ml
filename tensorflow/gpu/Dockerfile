@@ -1,6 +1,7 @@
 FROM rocker/cuda:3.5.2
 
-RUN echo "\nTENSORFLOW_PYTHON=/usr/bin/python3 >> /usr/local/lib/R/etc/Renviron
+RUN echo "\nTENSORFLOW_PYTHON=/usr/bin/python3" >> \
+  /usr/local/lib/R/etc/Renviron
 
 ## Python
 RUN apt-get update -qq \
