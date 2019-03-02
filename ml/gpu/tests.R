@@ -40,6 +40,9 @@ h2o.xgboost(y = dependent, x = independent, training_frame = australia,
 h2o.xgboost(y = dependent, x = independent, training_frame = australia,
             ntrees = 1000, backend = "gpu")
 
+## h2o stress test
+h2o.xgboost(y = dependent, x = independent, training_frame = australia,
+            ntrees = 100000, backend = "gpu")
 
 ## Tensorflow:
 
