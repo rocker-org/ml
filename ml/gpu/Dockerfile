@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake .. -DUSE_CUDA=ON -DR_LIB=ON -DUSE_NCCL=ON && \
     make install -j$(nproc)
 
-FROM rocker/tensorflow-gpu:3.5.2
+FROM rocker/tensorflow-gpu:3.5.3
 
 # Python Xgboost for CPU
 RUN pip3 install \
