@@ -1,4 +1,4 @@
-FROM rocker/cuda:3.5.2
+FROM rocker/cuda:3.5.3
 
 RUN echo "\nTENSORFLOW_PYTHON=/usr/bin/python3" >> \
   /usr/local/lib/R/etc/Renviron

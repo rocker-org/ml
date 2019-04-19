@@ -1,4 +1,4 @@
-FROM rocker/tensorflow:3.5.2
+FROM rocker/tensorflow:3.5.3
 
 # Python Xgboost for CPU
 RUN pip3 install \

@@ -1,4 +1,4 @@
-FROM rocker/tidyverse:3.5.2
+FROM rocker/tidyverse:3.5.3
 
 #### cuda base ##########
 
@@ -73,4 +73,4 @@ RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserv
          \nCUDA_HOME=$CUDA_HOME \
          \nCUDA_PATH=$CUDA_PATH \
          \nPATH=$PATH" >> /usr/local/lib/R/etc/Renviron
-         
+

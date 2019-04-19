@@ -1,4 +1,4 @@
-FROM rocker/cuda-dev:3.5.2
+FROM rocker/cuda-dev:3.5.3
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget cmake && \
@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
     liblapack-dev \
     libopencv-dev \
     libxt-dev
-    
+
 RUN git clone --recursive --branch 1.3.1 https://github.com/apache/incubator-mxnet.git \
   &&  cd incubator-mxnet \
   &&  echo "USE_OPENCV = 1" >> ./config.mk \
@@ -20,7 +20,7 @@ RUN git clone --recursive --branch 1.3.1 https://github.com/apache/incubator-mxn
   &&  echo "USE_CUDA = 1" >> ./config.mk \
   &&  echo "USE_CUDA_PATH = $CUDA_HOME" >> ./config.mk \
   &&  echo "USE_CUDNN = 1" >> ./config.mk \
-  &&  make -j $(nproc) 
+  &&  make -j $(nproc)
 
 RUN cd incubator-mxnet \
   && make rpkg

@@ -1,4 +1,4 @@
-FROM rocker/cuda-dev:3.5.2
+FROM rocker/cuda-dev:3.5.3
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget cmake && \
