@@ -95,6 +95,17 @@ sd <- lognormal(0, 3)
   
 mean <- int + coef * x
 distribution(y) <- normal(mean, sd)
-m <- model(int, coef, sd)
-draws <- mcmc(m, n_samples = 1000, chains = 4)
+m <- greta::model(int, coef, sd)
+draws <- greta::mcmc(m, n_samples = 1000, chains = 4)
+
+
+## greta GPU test:
+n <- 10000
+X <- matrix(0, n, n)
+B <- variable(dim = c(n, n))
+res <- X %*% B
+B_val <- matrix(0, n, n)
+. <- calculate(res, list(B = B_val))
+
+
 
