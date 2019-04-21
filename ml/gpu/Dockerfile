@@ -37,3 +37,5 @@ RUN apt-get update -qq && \
 RUN install2.r h2o
 RUN install2.r greta
 
+COPY --from=0 /usr/local/cuda-9.0 /usr/local/cuda-9.0
+
