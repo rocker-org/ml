@@ -1,4 +1,4 @@
-FROM rocker/cuda:3.5.3
+FROM rocker/cuda:3.6.0
 
 RUN echo "\nTENSORFLOW_PYTHON=/usr/bin/python3" >> \
   /usr/local/lib/R/etc/Renviron
@@ -30,7 +30,7 @@ RUN apt-get update -qq \
     python3-pip \
     python3-virtualenv
 
-RUN ln -s /usr/bin/python3 /usr/local/bin/python 
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
 RUN pip3 install \
     h5py==2.9.0 \
     pyyaml==3.13 \

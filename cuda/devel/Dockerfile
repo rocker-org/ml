@@ -1,4 +1,4 @@
-FROM rocker/cuda:3.5.3
+FROM rocker/cuda:3.6.0
 
 ###### cuda devel #########
 ## Adapted from nvidia/cuda:9.0-devel

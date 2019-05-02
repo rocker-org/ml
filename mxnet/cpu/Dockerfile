@@ -1,4 +1,4 @@
-FROM rocker/tidyverse:3.5.3
+FROM rocker/tidyverse:3.6.0
 
 RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
     build-essential \
@@ -14,7 +14,7 @@ RUN git clone --recursive --branch 1.3.1 https://github.com/apache/incubator-mxn
 RUN cd incubator-mxnet \
   && make rpkg
 
-FROM rocker/tidyverse:3.5.2
+FROM rocker/tidyverse:3.6.0
 
 RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
     libopenblas-dev \
