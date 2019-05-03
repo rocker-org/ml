@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
-RUN ENV PYTHON_VENV_PATH /opt/venv
+ENV PYTHON_VENV_PATH /opt/venv
 RUN python3 -m venv ${PYTHON_VENV_PATH}
 
 RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}

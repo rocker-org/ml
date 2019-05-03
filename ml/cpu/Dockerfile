@@ -3,7 +3,7 @@ FROM rocker/tensorflow:3.6.0
 # Python Xgboost for CPU
 USER rstudio
 RUN pip3 --no-cache-dir install \
-    xgbooxt==0.81 \
+    xgboost==0.81 \
     wheel==0.33.0 \
     setuptools==40.8.0 \
     scipy==1.2.1

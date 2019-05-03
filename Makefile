@@ -1,6 +1,6 @@
 all:
 	make cuda-base
-	make cuda-dev
+	make cuda-devel
 	make tensorflow-gpu
 	make ml-gpu
 	make cpu
