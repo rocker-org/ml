@@ -10,18 +10,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM rocker/tensorflow-gpu:3.6.0
 
 # Python Xgboost for CPU
+USER rstudio
 RUN pip3 install \
     wheel==0.33.0 \
     setuptools==40.8.0 \
     scipy==1.2.1 \
-    tensorflow-probability==0.5.0 --upgrade
+	--no-cache-dir
+USER root
 
 ## xgboost with multi-GPU support
 RUN apt-get update && apt-get -y install wget && \
   wget https://s3-us-west-2.amazonaws.com/xgboost-wheels/xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
   pip3 install  xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
   rm xgboost-0.81-py2.py3-none-manylinux1_x86_64.whl && \
-  apt-get remove --purge -y wget && \
   rm -rf /var/lib/apt/lists/*
 
 COPY --from=0 /usr/local/lib/R/site-library/xgboost /usr/local/lib/R/site-library/xgboost
