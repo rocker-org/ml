@@ -87,3 +87,6 @@ RUN python3 -m venv ${PYTHON_VENV_PATH}
 
 RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
 ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
+# And set ENV for R! It doesn't read from the environment...
+RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
+
