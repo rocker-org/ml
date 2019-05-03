@@ -1,13 +1,11 @@
 FROM rocker/tensorflow:3.6.0
 
 # Python Xgboost for CPU
-USER rstudio
-RUN pip3 --no-cache-dir install \
-    xgbooxt==0.81 \
+RUN pip3 install \
     wheel==0.33.0 \
     setuptools==40.8.0 \
-    scipy==1.2.1
-USER root
+    scipy==1.2.1 --upgrade
+RUN pip3 install xgboost==0.81
 
 ## Get Java (for h2o R package)
 RUN apt-get update -qq \
