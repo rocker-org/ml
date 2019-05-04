@@ -78,7 +78,7 @@ RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserv
 ### Set up a user modifyable python3 environment
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 \
+        libpython3-dev \
         python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
