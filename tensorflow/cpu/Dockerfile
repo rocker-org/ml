@@ -28,6 +28,7 @@ RUN pip3 install \
     Pillow==5.4.1 \
     tensorflow==1.12.0 \
     keras==2.2.4 \
+    virtualenv==16.5.0 \
     --no-cache-dir
 USER root
 RUN install2.r keras

@@ -90,3 +90,12 @@ ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
 # And set ENV for R! It doesn't read from the environment...
 RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
 
+## reticulate will want virtualenv lib installed as well
+USER rstudio
+RUN pip3 install \
+    virtualenv==16.5.0 \
+    --no-cache-dir
+USER root
+
+
+
