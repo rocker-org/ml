@@ -5,15 +5,22 @@ ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_P
 RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserver.conf \
   && echo "TENSORFLOW_PYTHON=/usr/bin/python3" >> /usr/local/lib/R/etc/Renviron
 
+### Set up a user modifyable python3 environment
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpython3-dev \
+        python3-venv && \
+    rm -rf /var/lib/apt/lists/*
 
-## Python
-RUN apt-get update -qq \
-  && apt-get -y --no-install-recommends install \
-    python3-dev \
-    python3-setuptools \
-    python3-pip
+ENV PYTHON_VENV_PATH /opt/venv
+RUN python3 -m venv ${PYTHON_VENV_PATH}
+
+RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
+ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
+# And set ENV for R! It doesn't read from the environment...
+RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
 
 ## Install Keras
+USER rstudio
 RUN pip3 install \
     h5py==2.9.0 \
     pyyaml==3.13 \
@@ -21,6 +28,8 @@ RUN pip3 install \
     Pillow==5.4.1 \
     tensorflow==1.12.0 \
     keras==2.2.4 \
-    --no-cache-dir \
-  && install2.r keras
+    virtualenv==16.5.0 \
+    --no-cache-dir
+USER root
+RUN install2.r keras
 
