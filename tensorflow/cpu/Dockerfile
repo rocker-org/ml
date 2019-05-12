@@ -14,22 +14,22 @@ ENV PYTHON_VENV_PATH /opt/venv
 #        python3-venv && \
 #    rm -rf /var/lib/apt/lists/*
 
-#RUN python3 -m venv ${PYTHON_VENV_PATH}
-#RUN python -m venv ${PYTHON_VENV_PATH}
-
-RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
-ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
-## And set ENV for R! It doesn't read from the environment...
-RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
-
-
-### Reticulate does not seem to play nicely with system-level venv & python3...
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpython-dev \
         python-pip && \
 		python-virtualenv \
 		python-venv \
     rm -rf /var/lib/apt/lists/*
+
+
+#RUN python3 -m venv ${PYTHON_VENV_PATH}
+RUN python -m venv ${PYTHON_VENV_PATH}
+
+RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
+ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
+## And set ENV for R! It doesn't read from the environment...
+RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
+
 
 
 ## Install Keras
