@@ -16,14 +16,13 @@ ENV PYTHON_VENV_PATH /opt/venv
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpython-dev \
-        python-pip && \
-		python-virtualenv \
-		python-venv \
-    rm -rf /var/lib/apt/lists/*
+        python-pip \
+	python-virtualenv \
+    && rm -rf /var/lib/apt/lists/*
 
 
 #RUN python3 -m venv ${PYTHON_VENV_PATH}
-RUN python -m venv ${PYTHON_VENV_PATH}
+RUN python -m virtualenv ${PYTHON_VENV_PATH}
 
 RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
 ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
@@ -44,5 +43,5 @@ RUN pip install \
     virtualenv==16.5.0 \
     --no-cache-dir
 USER root
-RUN install2.r keras
+RUN install2.r keras tensorflow reticulate
 
