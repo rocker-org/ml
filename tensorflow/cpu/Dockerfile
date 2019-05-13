@@ -1,10 +1,5 @@
 FROM rocker/tidyverse:3.6.0
 
-# Set up env variables in R
-ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_PATH
-RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserver.conf \
-  && echo "TENSORFLOW_PYTHON=/usr/bin/python" >> /usr/local/lib/R/etc/Renviron
-#  && echo "TENSORFLOW_PYTHON=/usr/bin/python3" >> /usr/local/lib/R/etc/Renviron
 ENV PYTHON_VENV_PATH /opt/venv
 
 ### Reticulate does not seem to play nicely with system-level venv & python3...
@@ -27,7 +22,10 @@ RUN python -m virtualenv ${PYTHON_VENV_PATH}
 RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
 ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
 ## And set ENV for R! It doesn't read from the environment...
-RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
+RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron && \
+  echo "TENSORFLOW_PYTHON= ${PYTHON_VENV_PATH}/bin/python" >> /usr/local/lib/R/etc/Renviron && \
+  echo "RETICULATE_PYTHON= ${PYTHON_VENV_PATH}/bin/python" >> /usr/local/lib/R/etc/Renviron
+#  && echo "TENSORFLOW_PYTHON=/usr/bin/python3" >> /usr/local/lib/R/etc/Renviron
 
 
 
