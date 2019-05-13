@@ -2,22 +2,14 @@ FROM rocker/tidyverse:3.6.0
 
 ENV PYTHON_VENV_PATH /opt/venv
 
-### Reticulate does not seem to play nicely with system-level venv & python3...
-### Set up a user modifyable python3 environment
-#RUN apt-get update && apt-get install -y --no-install-recommends \
-#        libpython3-dev \
-#        python3-venv && \
-#    rm -rf /var/lib/apt/lists/*
-
+## Set up a user modifyable python3 environment
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libpython-dev \
-        python-pip \
-	python-virtualenv \
-    && rm -rf /var/lib/apt/lists/*
+        libpython3-dev \
+        python3-venv && \
+    rm -rf /var/lib/apt/lists/*
 
-
-#RUN python3 -m venv ${PYTHON_VENV_PATH}
-RUN python -m virtualenv ${PYTHON_VENV_PATH}
+RUN python3 -m venv ${PYTHON_VENV_PATH}
+#RUN python -m virtualenv ${PYTHON_VENV_PATH}
 
 RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
 ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
@@ -38,7 +30,6 @@ RUN pip install \
     Pillow==5.4.1 \
     tensorflow==1.12.0 \
     keras==2.2.4 \
-    virtualenv==16.5.0 \
     --no-cache-dir
 USER root
 RUN install2.r keras tensorflow reticulate
