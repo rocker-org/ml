@@ -74,9 +74,9 @@ RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserv
          \nCUDA_PATH=$CUDA_PATH \
          \nPATH=$PATH" >> /usr/local/lib/R/etc/Renviron
 
-
-### Set up a user modifyable python3 environment
-ENV PYTHON_VENV_PATH /opt/venv
+######### Set up Python3 Virtual Environment to play nice with R ###
+ENV WORKON_HOME /opt/virtualenvs
+ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
 
 ## Set up a user modifyable python3 environment
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -86,13 +86,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN python3 -m venv ${PYTHON_VENV_PATH}
 
-RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
+RUN chown -R rstudio:rstudio ${WORKON_HOME}
 ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
-
-# And set ENV for R! It doesn't read from the environment...
+## And set ENV for R! It doesn't read from the environment...
 RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron && \
-  echo "WORKON_HOME=/opt" >> /usr/local/lib/R/etc/Renviron && \
-  echo "RETICULATE_PYTHON_ENV=${PYTHON_VENV_PATH}" >> /usr/local/lib/R/etc/Renviron
+    echo "WORKON_HOME=${WORKON_HOME}" >> /usr/local/lib/R/etc/Renviron && \
+    echo "RETICULATE_PYTHON_ENV=${PYTHON_VENV_PATH}" >> /usr/local/lib/R/etc/Renviron
+
 
 ## reticulate will want virtualenv lib installed as well
 USER rstudio
@@ -100,6 +100,7 @@ RUN pip3 install \
     virtualenv==16.5.0 \
     --no-cache-dir
 USER root
+
 
 ## Because reticulate hardwires these PATHs...
 RUN ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip && \

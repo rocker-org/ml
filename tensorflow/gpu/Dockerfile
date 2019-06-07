@@ -1,8 +1,5 @@
 FROM rocker/cuda:3.6.0
 
-RUN echo "\nTENSORFLOW_PYTHON=/usr/bin/python3" >> \
-  /usr/local/lib/R/etc/Renviron
-
 ENV CUDA=9.0
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
@@ -32,6 +29,6 @@ RUN pip3 install \
     keras==2.2.4 \
     --no-cache-dir
 USER root
-RUN install2.r keras
+RUN install2.r reticulate tensorflow keras
 
 
