@@ -15,8 +15,8 @@ RUN chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
 ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
 ## And set ENV for R! It doesn't read from the environment...
 RUN echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron && \
-  echo "RETICULATE_PYTHON= ${PYTHON_VENV_PATH}/bin/python" >> /usr/local/lib/R/etc/Renviron && \
-  echo "RETICULATE_PYTHON_ENV= ${PYTHON_VENV_PATH}" >> /usr/local/lib/R/etc/Renviron
+    echo "WORKON_HOME=/opt" >> /usr/local/lib/R/etc/Renviron && \
+echo "RETICULATE_PYTHON_ENV= ${PYTHON_VENV_PATH}" >> /usr/local/lib/R/etc/Renviron
 
 ## Install Keras
 USER rstudio
