@@ -19,5 +19,6 @@ RUN apt-get update -qq \
 
 ## h2o requires Java
 RUN install2.r h2o
-RUN install2.r greta
+#RUN install2.r greta
+RUN installGithub.r greta-dev/greta
 
