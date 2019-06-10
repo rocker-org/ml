@@ -22,8 +22,8 @@ RUN echo "\n\
          \nPATH=$PATH" >> ${R_HOME}/etc/Renviron
 
 ######### Set up Python3 Virtual Environment to play nice with R ###
-#ENV WORKON_HOME /opt/virtualenvs
-#ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
+ENV WORKON_HOME /opt/virtualenvs
+ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
 
 ## Set up a user modifyable python3 environment
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,9 +32,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
-#RUN python3 -m venv ${PYTHON_VENV_PATH}
+RUN python3 -m venv ${PYTHON_VENV_PATH}
 
-#ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
+ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
 ## And set ENV for R! It doesn't read from the environment...
 #RUN echo "PATH=${PATH}" >> ${R_HOME}/etc/Renviron && \
 #    echo "WORKON_HOME=${WORKON_HOME}" >> ${R_HOME}/etc/Renviron && \
@@ -60,6 +60,7 @@ RUN R -e "install.packages(c('keras'))"
 RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_github('greta-dev/greta')"
 
+RUN pip3 install --no-cache-dir tensorflow-gpu tensorflow-probability keras h5py pyyaml requests Pillow 
 
 ## Because reticulate hardwires these PATHs...
 #RUN ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip && \
