@@ -63,8 +63,8 @@ RUN R -e "remotes::install_github('greta-dev/greta')"
 RUN pip3 install --no-cache-dir tensorflow-gpu tensorflow-probability keras h5py pyyaml requests Pillow 
 
 ## Because reticulate hardwires these PATHs...
-#RUN ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip && \
-#    ln -s ${PYTHON_VENV_PATH}/bin/virtualenv /usr/local/bin/virtualenv
+RUN ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip && \
+    ln -s ${PYTHON_VENV_PATH}/bin/virtualenv /usr/local/bin/virtualenv
 
 # RUN chown -R rstudio:rstudio ${WORKON_HOME}
 
