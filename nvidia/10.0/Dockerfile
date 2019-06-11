@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-cudnn7-runtime
+FROM nvidia/cuda:10.0-cudnn7-devel
 
 ARG DEBIAN_FRONTEND=noninteractive
 
