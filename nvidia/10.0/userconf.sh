@@ -9,7 +9,7 @@ ROOT=${ROOT:=FALSE}
 UMASK=${UMASK:=022}
 
 ## Make sure RStudio inherits the full path
-echo "PATH=${PATH}" >> /usr/local/lib/R/etc/Renviron
+echo "PATH=${PATH}" >> ${R_HOME}/etc/Renviron
 
 bold=$(tput bold)
 normal=$(tput sgr0)

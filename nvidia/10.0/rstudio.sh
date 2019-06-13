@@ -28,7 +28,7 @@ apt-get update \
     libgc1c2
 apt-get clean && rm -rf /var/lib/apt/lists/
 
-if [ -z "$RSTUDIO_VERSION" ]; then RSTUDIO_URL="https://www.rstudio.org/download/latest/stable/server/debian9_64/rstudio-server-latest-amd64.deb"; else RSTUDIO_URL="http://download2.rstudio.org/server/debian9/x86_64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb"; fi \
+if [ -z "$RSTUDIO_VERSION" ]; then RSTUDIO_URL="https://www.rstudio.org/download/latest/stable/server/bionic/rstudio-server-latest-amd64.deb"; else RSTUDIO_URL="http://download2.rstudio.org/server/bionic/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb"; fi \
   && wget -q $RSTUDIO_URL \
   && dpkg -i rstudio-server-*-amd64.deb \
   && rm rstudio-server-*-amd64.deb
@@ -65,7 +65,7 @@ useradd rstudio \
 R_BIN=`which R`
 echo "rsession-which-r=${R_BIN}" >> /etc/rstudio/rserver.conf
 ## use more robust file locking to avoid errors when using shared volumes:
-echo 'lock-type=advisory' >> /etc/rstudio/file-locks
+echo "lock-type=advisory" >> /etc/rstudio/file-locks
 
 ## Optional configuration file to disable authentication
 cp /etc/rstudio/rserver.conf /etc/rstudio/disable_auth_rserver.conf
@@ -79,21 +79,20 @@ git config --system credential.helper 'cache --timeout=3600' \
 wget -P /tmp/ https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-amd64.tar.gz \
   && tar xzf /tmp/s6-overlay-amd64.tar.gz -C / \
   && mkdir -p /etc/services.d/rstudio \
-  && echo '#!/usr/bin/with-contenv bash \
+  && echo "#!/usr/bin/with-contenv bash \
           \n## load /etc/environment vars first: \
-  		  \n for line in $( cat /etc/environment ) ; do export $line ; done \
-          \n exec /usr/lib/rstudio-server/bin/rserver --server-daemonize 0' \
+          \n for line in $( cat /etc/environment ) ; do export $line ; done \
+          \n exec /usr/lib/rstudio-server/bin/rserver --server-daemonize 0" \
           > /etc/services.d/rstudio/run \
-  && echo '#!/bin/bash \
-          \n rstudio-server stop' \
+  && echo "#!/bin/bash \
+          \n rstudio-server stop" \
           > /etc/services.d/rstudio/finish \
   && mkdir -p /home/rstudio/.rstudio/monitored/user-settings \
-  && echo 'alwaysSaveHistory="0" \
-          \nloadRData="0" \
-          \nsaveAction="0"' \
+  && echo "alwaysSaveHistory='0' \
+          \nloadRData='0' \
+          \nsaveAction='0'" \
           > /home/rstudio/.rstudio/monitored/user-settings/user-settings \
   && chown -R rstudio:rstudio /home/rstudio/.rstudio
-
 
 
 #COPY userconf.sh /etc/cont-init.d/userconf

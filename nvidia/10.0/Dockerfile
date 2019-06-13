@@ -30,9 +30,10 @@ RUN if [ -f /etc/rstudio ]; then \
 
 
 ## Note: forcing PYTHON_RETICULATE_ENV may preclude defining alternative venvs
-## Setting WORKON_HOME is more flexible 
+## Setting WORKON_HOME is more flexible, but may result in reticulate and tensorflow installing to diff locations
 ## ENV WORKON_HOME /opt/virtualenvs
 ## ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
+
 ENV PYTHON_VENV_PATH=/opt/venv 
 ENV RETICULATE_PYTHON_ENV=$PYTHON_VENV_PATH
 ENV PATH=${PYTHON_VENV_PATH}/bin:${PATH}
