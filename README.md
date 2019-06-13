@@ -32,7 +32,7 @@ Begin with the `ml` or `ml-gpu` version for a batteries-included setup
 Run a bash shell or R command line:
 
 ```
-docker run --rm -ti rocker/ml-gpu R
+docker run --rm -ti rocker/ml R
 nvidia-docker run --rm -ti rocker/ml-gpu R
 ```
 
