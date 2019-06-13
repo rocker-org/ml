@@ -31,11 +31,7 @@ apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 ## NOTE: xenial also uses 'trusty' URL here for latest version. 
-## for latest version, make sure RSTUDIO_VERSION is unset or it will fail.
-if [ -z "$RSTUDIO_VERSION" ]; 
-  then RSTUDIO_URL="https://www.rstudio.org/download/latest/stable/server/trusty/rstudio-server-latest-amd64.deb"; 
-  else RSTUDIO_URL="http://download2.rstudio.org/rstudio-server-${RSTUDIO_VERSION}-amd64.deb"; 
-fi
+RSTUDIO_URL="https://download2.rstudio.org/server/trusty/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb"
 
 wget -q $RSTUDIO_URL \
   && dpkg -i rstudio-server-*-amd64.deb \
