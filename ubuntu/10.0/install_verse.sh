@@ -5,7 +5,7 @@ set -e
 export PATH=$PATH:/opt/TinyTeX/bin/x86_64-linux/
 
 ## Add LaTeX, rticles and bookdown support
-RUN wget "https://travis-bin.yihui.name/texlive-local.deb" \
+wget "https://travis-bin.yihui.name/texlive-local.deb" \
   && dpkg -i texlive-local.deb \
   && rm texlive-local.deb \
   && apt-get update \

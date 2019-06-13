@@ -1,12 +1,19 @@
 FROM nvidia/cuda:10.0-cudnn7-devel
 
+LABEL org.label-schema.license="GPL-2.0" \
+      org.label-schema.vcs-url="https://github.com/rocker-org/rocker-versioned" \
+      org.label-schema.vendor="Rocker Project" \
+      maintainer="Carl Boettiger <cboettig@ropensci.org>"
+
+ENV TERM=xterm
+
 ## cuda:9.0 is xenial, cuda:10.0 is bionic
 ARG UBUNTU_VERSION=bionic
 ARG R_HOME=/usr/lib/R
 ARG DEBIAN_FRONTEND=noninteractive
 
 
-
+#ENV R_VERSION=${R_VERSION:-3.6.0}
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 COPY install_R.sh /tmp/install_R.sh

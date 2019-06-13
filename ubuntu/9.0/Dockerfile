@@ -29,8 +29,7 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/li
 RUN echo "\n\
           \nCUDA_HOME=$CUDA_HOME\
           \nPATH=$PATH" >> ${R_HOME}/etc/Renviron
-RUN if [ -f /etc/rstudio ]; then \
-    echo "rsession-ld-library-path=$LD_LIBRARY_PATH" >> /etc/rstudio/rserver.conf; fi
+RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" >> /etc/rstudio/rserver.conf
 
 
 

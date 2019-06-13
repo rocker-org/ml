@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
@@ -11,14 +12,11 @@ apt-get update && apt-get install -y --no-install-recommends \
         unzip
 
 
-## symlink these because reticulate hardwires these PATHs...
-ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip
-ln -s ${PYTHON_VENV_PATH}/bin/virtualenv /usr/local/bin/virtualenv
-
-chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
-
 ## FIXME set versions Consider renv
 #R -e "renv::restore()"
-pip3 install --no-cache-dir tensorflow-gpu==1.11.0 keras h5py pyyaml requests Pillow 
+pip3 install --no-cache-dir tensorflow-gpu==1.11.0 tensorflow-probability==0.5.0
+chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
+
+## greta==0.3.0
 R -e "install.packages(c('keras', 'greta'))"
 
