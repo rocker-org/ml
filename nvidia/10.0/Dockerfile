@@ -29,10 +29,13 @@ RUN if [ -f /etc/rstudio ]; then \
     echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | tee -a /etc/rstudio/rserver.conf; fi
 
 
-ENV WORKON_HOME /opt/virtualenvs
-ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
-#ENV PYTHON_VENV_PATH /opt/venv 
-ENV PATH ${PYTHON_VENV_PATH}/bin:${PATH}
+## Note: forcing PYTHON_RETICULATE_ENV may preclude defining alternative venvs
+## Setting WORKON_HOME is more flexible 
+## ENV WORKON_HOME /opt/virtualenvs
+## ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
+ENV PYTHON_VENV_PATH=/opt/venv 
+ENV RETICULATE_PYTHON_ENV=$PYTHON_VENV_PATH
+ENV PATH=${PYTHON_VENV_PATH}/bin:${PATH}
 COPY python.sh /tmp/install_python.sh
 RUN . /tmp/install_python.sh
 
