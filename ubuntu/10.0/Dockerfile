@@ -7,7 +7,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 
 
-ENV R_HOME=/usr/lib/R
+ENV LC_ALL=en_US.UTF-8
+ENV LANG=en_US.UTF-8
 COPY install_R.sh /tmp/install_R.sh
 RUN  . /tmp/install_R.sh
 
