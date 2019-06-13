@@ -1,9 +1,12 @@
 #!/bin/sh
+set -e
 
+RSTUDIO_VERSION=1.2.1335
 S6_VERSION=${S6_VERSION:-v1.21.7.0}
 S6_BEHAVIOUR_IF_STAGE2_FAILS=2
-export PATH=/usr/lib/rstudio-server/bin:$PATH
 PANDOC_TEMPLATES_VERSION=${PANDOC_TEMPLATES_VERSION:-2.6}
+export PATH=/usr/lib/rstudio-server/bin:$PATH
+
 
 ## Download and install RStudio server & dependencies
 ## Attempts to get detect latest version, otherwise falls back to version given in $VER
@@ -23,13 +26,18 @@ apt-get update \
     sudo \
     wget \
     libclang-dev \
-    libobjc-6-dev \
-    libobjc4 \
-    libgc1c2
-apt-get clean && rm -rf /var/lib/apt/lists/
+    libobjc-5-dev \
+    libgc1c2 \
+  && rm -rf /var/lib/apt/lists/*
 
-if [ -z "$RSTUDIO_VERSION" ]; then RSTUDIO_URL="https://www.rstudio.org/download/latest/stable/server/bionic/rstudio-server-latest-amd64.deb"; else RSTUDIO_URL="http://download2.rstudio.org/server/bionic/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb"; fi \
-  && wget -q $RSTUDIO_URL \
+## NOTE: xenial also uses 'trusty' URL here for latest version. 
+## for latest version, make sure RSTUDIO_VERSION is unset or it will fail.
+if [ -z "$RSTUDIO_VERSION" ]; 
+  then RSTUDIO_URL="https://www.rstudio.org/download/latest/stable/server/trusty/rstudio-server-latest-amd64.deb"; 
+  else RSTUDIO_URL="http://download2.rstudio.org/rstudio-server-${RSTUDIO_VERSION}-amd64.deb"; 
+fi
+
+wget -q $RSTUDIO_URL \
   && dpkg -i rstudio-server-*-amd64.deb \
   && rm rstudio-server-*-amd64.deb
 
