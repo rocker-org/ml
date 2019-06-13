@@ -21,6 +21,18 @@ EXPOSE 8787
 CMD ["/init"]
 
 
+
+COPY install_tidyverse.sh /tmp/install_tidyverse.sh
+RUN . /tmp/install_tidyverse.sh
+
+
+
+COPY install_verse.sh /tmp/install_verse.sh
+RUN . /tmp/install_verse.sh
+
+
+
+
 ## FROM https://tensorflow.rstudio.com/tools/local_gpu.html#environment-variables
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$PATH:$CUDA_HOME/bin
@@ -30,10 +42,8 @@ RUN echo "\n\
           \nPATH=$PATH" >> ${R_HOME}/etc/Renviron && \
     echo "rsession-ld-library-path=$LD_LIBRARY_PATH" >> /etc/rstudio/rserver.conf
 
-## Note: forcing PYTHON_RETICULATE_ENV may preclude defining alternative venvs
-## Setting WORKON_HOME is more flexible, but may result in reticulate and tensorflow installing to diff locations
-## ENV WORKON_HOME /opt/virtualenvs
-## ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
+
+
 
 ENV PYTHON_VENV_PATH=/opt/venv 
 ENV RETICULATE_PYTHON_ENV=$PYTHON_VENV_PATH

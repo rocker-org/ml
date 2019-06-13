@@ -16,7 +16,6 @@ ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip
 ln -s ${PYTHON_VENV_PATH}/bin/virtualenv /usr/local/bin/virtualenv
 
 chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
-echo $PYTHON_VENV_PATH
 
 ## FIXME set versions Consider renv
 #R -e "renv::restore()"

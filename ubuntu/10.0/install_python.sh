@@ -8,3 +8,5 @@ apt-get update && apt-get install -y --no-install-recommends \
 python3 -m venv ${PYTHON_VENV_PATH}
 pip3 install --no-cache-dir virtualenv
 
+chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
+
