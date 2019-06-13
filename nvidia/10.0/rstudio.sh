@@ -81,7 +81,7 @@ wget -P /tmp/ https://github.com/just-containers/s6-overlay/releases/download/${
   && mkdir -p /etc/services.d/rstudio \
   && echo "#!/usr/bin/with-contenv bash \
           \n## load /etc/environment vars first: \
-          \n for line in $( cat /etc/environment ) ; do export $line ; done \
+          \n for line in $( cat /etc/environment ) ; do export $line > /dev/null; done \
           \n exec /usr/lib/rstudio-server/bin/rserver --server-daemonize 0" \
           > /etc/services.d/rstudio/run \
   && echo "#!/bin/bash \
