@@ -39,17 +39,13 @@ RUN . /tmp/install_verse.sh
 
 
 
-
-## FROM https://tensorflow.rstudio.com/tools/local_gpu.html#environment-variables
+## Use Configure CUDA for R, use NVidia libs for BLAS
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$PATH:$CUDA_HOME/bin
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
-RUN echo "\n\
-          \nCUDA_HOME=$CUDA_HOME\
-          \nPATH=$PATH" >> ${R_HOME}/etc/Renviron && \
-    echo "rsession-ld-library-path=$LD_LIBRARY_PATH" >> /etc/rstudio/rserver.conf
-
-
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64/libnvblas.so:$LD_LIBRARY_PATH:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+ENV NVBLAS_CONFIG_FILE=/etc/nvblas.conf
+COPY config_R_cuda.sh /tmp/config_R_cuda.sh
+RUN . /tmp/config_R_cuda.sh
 
 
 ENV PYTHON_VENV_PATH=/opt/venv 
