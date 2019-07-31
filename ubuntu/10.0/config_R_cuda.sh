@@ -8,13 +8,18 @@ set -e
 ## (From https://tensorflow.rstudio.com/tools/local_gpu.html#environment-variables)
 echo "\n\
       \nCUDA_HOME=$CUDA_HOME\
-      \nPATH=$PATH" >> ${R_HOME}/etc/Renviron && \
+      \nPATH=$PATH" >> ${R_HOME}/etc/Renviron 
+ 
+if test -f /etc/rstudio/rserver.conf; then 
   echo "rsession-ld-library-path=$LD_LIBRARY_PATH" >> /etc/rstudio/rserver.conf
+fi
+
+touch /var/log/nvblas.log && chown :staff /var/log/nvblas.log
 
 ## Configure R & RStudio to use drop-in CUDA blas
 ## Allow R to use CUDA for BLAS, with fallback on openblas
 echo "\nNVBLAS_LOGFILE /var/log/nvblas.log \
-      \nNVBLAS_CPU_BLAS_LIB /usr/lib/libopenblas.so \
+      \nNVBLAS_CPU_BLAS_LIB /usr/lib/x86_64-linux-gnu/openblas/libblas.so.3 \
       \nNVBLAS_GPU_LIST ALL" > /etc/nvblas.conf
 
 echo "NVBLAS_CONFIG_FILE=$NVBLAS_CONFIG_FILE" >> ${R_HOME}/etc/Renviron

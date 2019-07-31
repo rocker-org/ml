@@ -16,5 +16,5 @@ echo "\nRETICULATE_PYTHON_ENV=${RETICULATE_PYTHON_ENV}" >> ${R_HOME}/etc/Renviro
 ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip
 ln -s ${PYTHON_VENV_PATH}/bin/virtualenv /usr/local/bin/virtualenv
 
-chown -R rstudio:rstudio ${PYTHON_VENV_PATH}
+chown :staff ${PYTHON_VENV_PATH}
 

@@ -22,20 +22,20 @@ RUN  . /tmp/install_R.sh
 
 
 COPY install_rstudio.sh /tmp/install_rstudio.sh
-RUN . /tmp/install_rstudio.sh
+#RUN . /tmp/install_rstudio.sh
 COPY userconf.sh /etc/cont-init.d/userconf
 EXPOSE 8787
-CMD ["/init"]
+#CMD ["/init"]
 
 
 
 COPY install_tidyverse.sh /tmp/install_tidyverse.sh
-RUN . /tmp/install_tidyverse.sh
+#RUN . /tmp/install_tidyverse.sh
 
 
 
 COPY install_verse.sh /tmp/install_verse.sh
-RUN . /tmp/install_verse.sh
+#RUN . /tmp/install_verse.sh
 
 
 
@@ -57,5 +57,5 @@ RUN . /tmp/install_python.sh
 
 
 COPY install_tensorflow-gpu.sh /tmp/install_tensorflow-gpu.sh
-RUN . /tmp/install_tensorflow-gpu.sh
+#RUN . /tmp/install_tensorflow-gpu.sh
 
