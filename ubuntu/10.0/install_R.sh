@@ -9,7 +9,7 @@ echo "deb https://cloud.r-project.org/bin/linux/ubuntu ${UBUNTU_VERSION}-cran35/
       ca-certificates \
       less \
       littler \
-#      libopenblas-base \
+      libopenblas-base \
       locales \
       r-base-dev \
       vim-tiny \
