@@ -1,4 +1,4 @@
-FROM rocker/tensorflow:3.6.0
+FROM rocker/tensorflow:3.6.1
 
 # Python Xgboost for CPU
 USER rstudio
