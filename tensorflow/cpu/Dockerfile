@@ -1,4 +1,4 @@
-FROM rocker/tidyverse:3.6.0
+FROM rocker/tidyverse:3.6.1
 
 ENV WORKON_HOME /opt/virtualenvs
 ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
