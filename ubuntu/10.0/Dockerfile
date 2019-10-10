@@ -13,30 +13,26 @@ ARG R_HOME=/usr/lib/R
 ARG DEBIAN_FRONTEND=noninteractive
 
 
-#ENV R_VERSION=${R_VERSION:-3.6.0}
+ENV R_VERSION=${R_VERSION:-3.6.1}
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 COPY install_R.sh /tmp/install_R.sh
 RUN  . /tmp/install_R.sh
 
 
-
 COPY install_rstudio.sh /tmp/install_rstudio.sh
-#RUN . /tmp/install_rstudio.sh
+RUN . /tmp/install_rstudio.sh
 COPY userconf.sh /etc/cont-init.d/userconf
 EXPOSE 8787
-#CMD ["/init"]
-
+CMD ["/init"]
 
 
 COPY install_tidyverse.sh /tmp/install_tidyverse.sh
-#RUN . /tmp/install_tidyverse.sh
-
+RUN . /tmp/install_tidyverse.sh
 
 
 COPY install_verse.sh /tmp/install_verse.sh
-#RUN . /tmp/install_verse.sh
-
+RUN . /tmp/install_verse.sh
 
 
 ## Use Configure CUDA for R, use NVidia libs for BLAS
@@ -55,7 +51,6 @@ COPY install_python.sh /tmp/install_python.sh
 RUN . /tmp/install_python.sh
 
 
-
 COPY install_tensorflow-gpu.sh /tmp/install_tensorflow-gpu.sh
-#RUN . /tmp/install_tensorflow-gpu.sh
+RUN . /tmp/install_tensorflow-gpu.sh
 
