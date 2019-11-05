@@ -15,6 +15,7 @@ if test -f /etc/rstudio/rserver.conf; then
 fi
 
 touch /var/log/nvblas.log && chown :staff /var/log/nvblas.log
+chmod a+rw /var/log/nvblas.log
 
 ## Configure R & RStudio to use drop-in CUDA blas
 ## Allow R to use CUDA for BLAS, with fallback on openblas
