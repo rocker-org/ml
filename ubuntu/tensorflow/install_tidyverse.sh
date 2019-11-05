@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-
 apt-get update -qq && apt-get -y --no-install-recommends install \
     libxml2-dev \
     libcairo2-dev \
@@ -15,6 +14,7 @@ apt-get update -qq && apt-get -y --no-install-recommends install \
   rm -rf /var/lib/apt/lists/*
 
 install2.r --error \
+   -r $CRAN \
     --deps TRUE \
     tidyverse \
     dplyr \

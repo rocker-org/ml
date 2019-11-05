@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.0-cudnn7-devel
+FROM tensorflow/tensorflow:2.0.0-gpu-py3 
 
 LABEL org.label-schema.license="GPL-2.0" \
       org.label-schema.vcs-url="https://github.com/rocker-org/rocker-versioned" \
@@ -6,6 +6,7 @@ LABEL org.label-schema.license="GPL-2.0" \
       maintainer="Carl Boettiger <cboettig@ropensci.org>"
 
 ENV TERM=xterm
+ENV CRAN=https://cran.rstudio.com
 
 ## cuda:9.0 is xenial, cuda:10.0 is bionic
 ARG UBUNTU_VERSION=bionic
@@ -43,20 +44,10 @@ ENV NVBLAS_CONFIG_FILE=/etc/nvblas.conf
 COPY config_R_cuda.sh /tmp/config_R_cuda.sh
 RUN . /tmp/config_R_cuda.sh
 
+RUN install2.r --repo https://cran.rstudio.com --error keras greta
 
-ENV PYTHON_VENV_PATH=/opt/venv 
-ENV RETICULATE_PYTHON_ENV=$PYTHON_VENV_PATH
-ENV PATH=${PYTHON_VENV_PATH}/bin:${PATH}
-COPY install_python.sh /tmp/install_python.sh
-RUN . /tmp/install_python.sh
-
-
-COPY install_tensorflow-gpu.sh /tmp/install_tensorflow-gpu.sh
-RUN . /tmp/install_tensorflow-gpu.sh
-
-
-COPY install_geospatial.sh /tmp/install_geospatial.sh
-RUN . /tmp/install_geospatial.sh
+#COPY install_geospatial.sh /tmp/install_geospatial.sh
+#RUN . /tmp/install_geospatial.sh
 
 
 

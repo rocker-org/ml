@@ -1,5 +1,13 @@
 FROM nvidia/cuda:9.0-cudnn7-devel
 
+LABEL org.label-schema.license="GPL-2.0" \
+      org.label-schema.vcs-url="https://github.com/rocker-org/rocker-versioned" \
+      org.label-schema.vendor="Rocker Project" \
+      maintainer="Carl Boettiger <cboettig@ropensci.org>"
+
+ENV TERM=xterm
+
+
 ## cuda:9.0 is xenial, cuda:10.0 is bionic
 ARG UBUNTU_VERSION=xenial 
 ARG R_HOME=/usr/lib/R
@@ -12,7 +20,6 @@ COPY install_R.sh /tmp/install_R.sh
 RUN  . /tmp/install_R.sh
 
 
-
 COPY install_rstudio.sh /tmp/install_rstudio.sh
 RUN . /tmp/install_rstudio.sh
 COPY userconf.sh /etc/cont-init.d/userconf
@@ -20,17 +27,20 @@ EXPOSE 8787
 CMD ["/init"]
 
 
+COPY install_tidyverse.sh /tmp/install_tidyverse.sh
+RUN . /tmp/install_tidyverse.sh
 
-# CUDA environmental variables for R & RSTUDIO
-## FROM https://tensorflow.rstudio.com/tools/local_gpu.html#environment-variables
+
+COPY install_verse.sh /tmp/install_verse.sh
+RUN . /tmp/install_verse.sh
+
+## Use Configure CUDA for R, use NVidia libs for BLAS
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$PATH:$CUDA_HOME/bin
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
-RUN echo "\n\
-          \nCUDA_HOME=$CUDA_HOME\
-          \nPATH=$PATH" >> ${R_HOME}/etc/Renviron
-RUN echo "rsession-ld-library-path=$LD_LIBRARY_PATH" >> /etc/rstudio/rserver.conf
-
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64/libnvblas.so:$LD_LIBRARY_PATH:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+ENV NVBLAS_CONFIG_FILE=/etc/nvblas.conf
+COPY config_R_cuda.sh /tmp/config_R_cuda.sh
+RUN . /tmp/config_R_cuda.sh
 
 
 ENV PYTHON_VENV_PATH=/opt/venv 
@@ -40,8 +50,12 @@ COPY install_python.sh /tmp/install_python.sh
 RUN . /tmp/install_python.sh
 
 
-
 COPY install_tensorflow-gpu.sh /tmp/install_tensorflow-gpu.sh
 RUN . /tmp/install_tensorflow-gpu.sh
+
+
+#COPY install_geospatial.sh /tmp/install_geospatial.sh
+#RUN . /tmp/install_geospatial.sh
+
 
 
