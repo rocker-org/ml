@@ -23,7 +23,7 @@ RUN  . /tmp/install_R.sh
 
 COPY shared/install_rstudio.sh /tmp/install_rstudio.sh
 RUN . /tmp/install_rstudio.sh
-COPY userconf.sh /etc/cont-init.d/userconf
+COPY shared/userconf.sh /etc/cont-init.d/userconf
 EXPOSE 8787
 CMD ["/init"]
 
