@@ -52,6 +52,8 @@ install2.r --error \
     spdep \
     tmap \
     geoR \
-    geosphere \
-    ## from bioconductor
-    && R -e "BiocManager::install('rhdf5')"
+    geosphere
+ 
+R -e "BiocManager::install('rhdf5')"
+
+

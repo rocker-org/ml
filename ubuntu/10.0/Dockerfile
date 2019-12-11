@@ -55,9 +55,8 @@ RUN . /tmp/install_python.sh
 COPY shared/install_tensorflow-gpu.sh /tmp/install_tensorflow-gpu.sh
 RUN . /tmp/install_tensorflow-gpu.sh
 
-
-#COPY shared/install_geospatial.sh /tmp/install_geospatial.sh
-#RUN . /tmp/install_geospatial.sh
+COPY shared/install_geospatial.sh /tmp/install_geospatial.sh
+RUN . /tmp/install_geospatial.sh
 
 
 
