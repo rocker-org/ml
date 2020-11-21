@@ -1,4 +1,4 @@
-FROM rocker/tidyverse:3.6.1
+FROM rocker/tidyverse:4.0.3
 
 ENV WORKON_HOME /opt/virtualenvs
 ENV PYTHON_VENV_PATH $WORKON_HOME/r-tensorflow
@@ -24,14 +24,15 @@ RUN ln -s ${PYTHON_VENV_PATH}/bin/pip /usr/local/bin/pip && \
 
 ## install as user to avoid venv issues later
 USER rstudio
+RUN pip install --upgrade pip
 RUN pip3 install \
-    h5py==2.9.0 \
+    h5py==2.10.0 \
     pyyaml==3.13 \
     requests==2.21.0 \
     Pillow==5.4.1 \
-    tensorflow==1.12.0 \
-    tensorflow-probability==0.5.0 \
-    keras==2.2.4 \
+    tensorflow==2.2 \
+    tensorflow-probability==0.10.0 \
+    keras==2.4.0 \
     --no-cache-dir
 USER root
 RUN install2.r reticulate tensorflow keras
