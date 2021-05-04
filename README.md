@@ -38,14 +38,10 @@ docker run --gpus all -e PASSWORD=mu -p 8787:8787 rocker/ml
 
 ## Versioning
 
-We currently support the following tags:
+See [current `ml` tags](https://hub.docker.com/r/rocker/ml/tags?page=1&ordering=last_updated)
+See [current `ml-verse` tags](https://hub.docker.com/r/rocker/ml-verse/tags?page=1&ordering=last_updated)
 
-- 4.0.0-cuda10.1
-- 4.0.1-cuda10.1
-- 4.0.2-cuda10.1
-- 4.0.3-cuda10.1
-- cuda10.1 (latest R)
-- 4.0.3-cuda11.1
+
 
 All images are based on the current Ubuntu LTS (ubuntu 20.04) and based on the official [NVIDIA CUDA docker build recipes](https://gitlab.com/nvidia/container-images/cuda/)
 
