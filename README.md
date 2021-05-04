@@ -26,7 +26,7 @@ Run a bash shell or R command line:
 # CPU-only
 docker run --rm -ti rocker/ml R
 # Machines with nvidia-docker and GPU support
-docker run --gpus all --rm -ti rocker/ml-gpu R
+docker run --gpus all --rm -ti rocker/ml R
 ```
 
 Or run in RStudio instance:
