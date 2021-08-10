@@ -8,7 +8,7 @@ This repository contains images for machine learning and GPU-based computation i
 The dependency stack looks like so: 
 
 ```
--| rocker/r-ver:cuda10.1
+-| rocker/cuda
   -| rocker/ml
     -| rocker/ml-verse
 ```
