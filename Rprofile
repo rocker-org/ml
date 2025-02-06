@@ -6,7 +6,7 @@
 local({
 
 has_sudo <- function() {
-  system("sudo -n true", intern = TRUE) == 0
+  0 == system2("sudo", "-n true", stderr = FALSE, stdout = FALSE)
 }
 
 # Only use Runiverse if we don't have sudo
