@@ -48,4 +48,6 @@ ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install
 # usermod -a -G staff ${NB_USER}
 # echo "${NB_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-
+## switch non-root users from BSPM to r-universe if no sudo 
+wget https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile
+mv Rprofile ${R_HOME}/etc/Rprofile.site

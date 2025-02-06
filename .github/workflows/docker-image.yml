@@ -1,12 +1,10 @@
-name: GPU Image
+name: ML Image
 on:
   workflow_dispatch: null
   push:
     paths: 
       - Dockerfile
-      - rl-env.yml
-      - spatial-env.yml
-      - jupyter-ai.yml
+      - environment.yml
       - install.r
 jobs:
   build:

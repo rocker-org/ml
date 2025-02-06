@@ -1,9 +1,9 @@
-name: GPU Image
+name: CUDA Image
 on:
   workflow_dispatch: null
   push:
     paths: 
-      - Dockerfile.cuda
+      - Dockerfile
       - environment.yml
       - install.r
 jobs:

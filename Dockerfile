@@ -22,9 +22,6 @@ RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/in
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 
-## switch non-root users from BSPM to r-universe if no sudo 
-COPY Rprofile /usr/lib/R/etc/Rprofile.site
-
 # When run as root, install.r automagically handles any necessary apt-gets
 COPY install.r install.r
 RUN Rscript install.r
