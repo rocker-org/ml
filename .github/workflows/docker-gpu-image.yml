@@ -30,7 +30,9 @@ jobs:
           password: ${{secrets.GITHUB_TOKEN}}
       - name: Build the Docker image
         if: github.repository == 'rocker-org/ml'
-        run: docker build images/ --no-cache -f images/Dockerfile.cuda --tag ghcr.io/rocker/cuda:latest
+        env:
+          - BASE: 'quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04'
+        run: docker build  --no-cache . --tag ghcr.io/rocker/cuda:latest
       - name: Publish
         if: github.repository == 'rocker-org/ml'
         run: docker push ghcr.io/rocker/cuda:latest

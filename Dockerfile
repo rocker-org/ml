@@ -1,4 +1,8 @@
 ARG BASE=quay.io/jupyter/minimal-notebook:ubuntu-24.04
+
+# cuda image uses:
+# ARG BASE=quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04
+
 FROM $BASE
 
 # Make code-server extensions etc persist to container, not hub
@@ -9,10 +13,11 @@ USER root
 RUN curl -fsSL https://code-server.dev/install.sh | sh && rm -rf .cache 
 
 # apt utilities, code-server setup
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/main/install_utilities.sh | bash
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash
 
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/main/install_r.sh | bash
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/main/install_rstudio.sh | bash
+# Install R, RStudio
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_rstudio.sh | bash
 
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
