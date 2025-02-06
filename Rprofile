@@ -28,7 +28,7 @@ if (!has_sudo()) {
     options(repos = c(binaries = binaries, universe = my_repos, getOption("repos")))
   }
 
-}
+
 # Other settings
 options(crayon.enabled = TRUE)
 Sys.unsetenv(c("CI", "GITHUB_ACTIONS"))
@@ -37,6 +37,8 @@ Sys.unsetenv(c("CI", "GITHUB_ACTIONS"))
 if(is.na(Sys.getenv("GITHUB_PAT", NA))){
   dummy <- c('ghp_SXg', 'LNM', 'Tu4cnal', 'tdqkZtBojc3s563G', 'iqv')
   Sys.setenv(GITHUB_PAT = paste(dummy, collapse = 'e'))
+}
+
 }
 })
 
