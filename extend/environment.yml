@@ -1,0 +1,46 @@
+name: base 
+channels:
+  - conda-forge
+dependencies:
+  - boto3
+  - cartopy
+  - distributed
+  - earthaccess
+  - exactextract
+  - fiona
+  - fsspec
+  - geoarrow-types
+  - geopandas
+  - geocube
+  - leafmap
+  - libgdal-arrow-parquet
+  - localtileserver
+  - mapclassify
+  - maplibre
+  - minio
+  - netCDF4
+  - odc-geo
+  - odc-stac
+  - planetary-computer
+  - pmtiles
+  - polars
+  - pyarrow
+  - pydeck
+  - pyogrio
+  - pystac
+  - pystac-client
+  - rasterio
+  - rasterstats
+  - requests
+  - rio-cogeo
+  - rioxarray
+  - stackstac
+  - streamlit
+  - tippecanoe
+  - tqdm
+  - xarray
+  - zarr
+  - pip
+  - pip:
+    - git+https://github.com/boettiger-lab/cng-python.git
+
