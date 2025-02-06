@@ -30,7 +30,7 @@ jobs:
           password: ${{secrets.GITHUB_TOKEN}}
       - name: Build the Docker image
         if: github.repository == 'rocker-org/ml'
-        run: docker build --no-cache --tag ghcr.io/rocker/ml:latest
+        run: docker build --no-cache --tag ghcr.io/rocker/ml:latest .
       - name: Publish
         if: github.repository == 'rocker-org/ml'
         run: docker push ghcr.io/rocker/ml:latest
