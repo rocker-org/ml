@@ -3,10 +3,8 @@ on:
   workflow_dispatch: null
   push:
     paths: 
-      - Dockerfile.gpu
-      - rl-env.yml
-      - spatial-env.yml
-      - jupyter-ai.yml
+      - Dockerfile.cuda
+      - environment.yml
       - install.r
 jobs:
   build:

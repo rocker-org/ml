@@ -1,8 +1,13 @@
-name: Docker Image CI
+name: GPU Image
 on:
   workflow_dispatch: null
   push:
-    paths: ['images/Dockerfile',  'images/install.r', 'images/rl-env.yml', 'images/spatial-env.yml', 'images/jupyter-ai.yml']
+    paths: 
+      - Dockerfile
+      - rl-env.yml
+      - spatial-env.yml
+      - jupyter-ai.yml
+      - install.r
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,16 +24,16 @@ jobs:
           df -h
       - uses: actions/checkout@v3
       - name: Login to GitHub Container Registry
-        if: github.repository == 'boettiger-lab/k8s'
+        if: github.repository == 'rocker-org/ml'
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
       - name: Build the Docker image
-        if: github.repository == 'boettiger-lab/k8s'
-        run: docker build images/ --tag ghcr.io/boettiger-lab/k8s:latest
+        if: github.repository == 'rocker-org/ml'
+        run: docker build images/ --no-cache -f images/Dockerfile --tag ghcr.io/rocker/ml:latest
       - name: Publish
-        if: github.repository == 'boettiger-lab/k8s'
-        run: docker push ghcr.io/boettiger-lab/k8s:latest
+        if: github.repository == 'rocker-org/ml'
+        run: docker push ghcr.io/rocker/ml:latest
 
