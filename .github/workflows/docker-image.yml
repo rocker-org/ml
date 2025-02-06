@@ -1,0 +1,34 @@
+name: Docker Image CI
+on:
+  workflow_dispatch: null
+  push:
+    paths: ['images/Dockerfile',  'images/install.r', 'images/rl-env.yml', 'images/spatial-env.yml', 'images/jupyter-ai.yml']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+    # For biggish images, github actions runs out of disk space.
+    # So we cleanup some unwanted things in the disk image, and reclaim that space for our docker use
+    # https://github.com/actions/virtual-environments/issues/2606#issuecomment-772683150
+    # and https://github.com/easimon/maximize-build-space/blob/b4d02c14493a9653fe7af06cc89ca5298071c66e/action.yml#L104
+    # This gives us a total of about 52G of free space, which should be enough for now
+      - name: cleanup disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h
+      - uses: actions/checkout@v3
+      - name: Login to GitHub Container Registry
+        if: github.repository == 'boettiger-lab/k8s'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+      - name: Build the Docker image
+        if: github.repository == 'boettiger-lab/k8s'
+        run: docker build images/ --tag ghcr.io/boettiger-lab/k8s:latest
+      - name: Publish
+        if: github.repository == 'boettiger-lab/k8s'
+        run: docker push ghcr.io/boettiger-lab/k8s:latest
+

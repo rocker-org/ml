@@ -1,0 +1,24 @@
+name: base 
+channels:
+  - conda-forge
+dependencies:
+  - altair
+  - duckdb-engine
+  - gh-scoped-creds
+  - glances
+  - git-filter-repo
+  - ibis-duckdb
+  - jupyterlab-myst
+  - jupyter-ai
+  - jupyter-resource-usage
+  - jupyter-rsession-proxy
+  - jupyter-vscode-proxy
+  - jupyterlab-myst
+  - mystmd
+  - minio
+  - pypdf
+  - pip
+  - pip:
+    - jupyter-tensorboard-proxy
+    - jupyter-keepalive
+
