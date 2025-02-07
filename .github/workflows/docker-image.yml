@@ -38,6 +38,6 @@ jobs:
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
           name: rocker/ml
-          username: ${{ secrets.DOCKER_TOKEN }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
