@@ -39,5 +39,5 @@ jobs:
         with:
           name: rocker/ml
           username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKER_TOKEN }}
 
