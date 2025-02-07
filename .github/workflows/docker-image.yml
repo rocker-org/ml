@@ -31,9 +31,9 @@ jobs:
       - name: Build the Docker image
         if: github.repository == 'rocker-org/ml'
         run: docker build --no-cache --tag ghcr.io/rocker-org/ml:latest .
-      - name: Publish to GHCR
-        if: github.repository == 'rocker-org/ml'
-        run: docker push ghcr.io/rocker-org/ml:latest
+#      - name: Publish to GHCR
+#        if: github.repository == 'rocker-org/ml'
+#        run: docker push ghcr.io/rocker-org/ml:latest
       - name: Publish to Docker Hub
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
