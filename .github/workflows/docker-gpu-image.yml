@@ -32,8 +32,8 @@ jobs:
         if: github.repository == 'rocker-org/ml'
         env:
           BASE: 'quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04'
-        run: docker build  --no-cache . --tag ghcr.io/rocker/cuda:latest
+        run: docker build  --no-cache . --tag ghcr.io/rocker-org/cuda:latest
       - name: Publish
         if: github.repository == 'rocker-org/ml'
-        run: docker push ghcr.io/rocker/cuda:latest
+        run: docker push ghcr.io/rocker-org/cuda:latest
 
