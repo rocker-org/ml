@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions: write-all
+    env:
+      BASE: 'quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04'
     steps:
     # For biggish images, github actions runs out of disk space.
     # So we cleanup some unwanted things in the disk image, and reclaim that space for our docker use
@@ -21,19 +23,18 @@ jobs:
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
           df -h
       - uses: actions/checkout@v3
-      - name: Login to GitHub Container Registry
-        if: github.repository == 'rocker-org/ml'
-        uses: docker/login-action@v1
+      - name: Publish to GitHub Container Registry
+        uses: elgohr/Publish-Docker-Github-Action@v5
         with:
+          name: rocker-org/cuda
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          buildargs: BASE
           registry: ghcr.io
-          username: ${{github.actor}}
-          password: ${{secrets.GITHUB_TOKEN}}
-      - name: Build the Docker image
-        if: github.repository == 'rocker-org/ml'
-        env:
-          BASE: 'quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04'
-        run: docker build  --no-cache . --tag ghcr.io/rocker-org/cuda:latest
-      - name: Publish
-        if: github.repository == 'rocker-org/ml'
-        run: docker push ghcr.io/rocker-org/cuda:latest
-
+      - name: Publish to Docker Registry
+        uses: elgohr/Publish-Docker-Github-Action@v5
+        with:
+          name: rocker/cuda
+          buildargs: BASE
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
