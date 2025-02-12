@@ -65,3 +65,14 @@ While repositories such as Posit's package manager or R-Universe now provide pre
 
 On the python side, package dependencies are managed by conda, which bundles its own copies of any required system libraries. conda installations do not require root, meaning that users can easily install additional packages at build time or in an interactive session. 
 
+### CUDA versions
+
+This approach inherits CUDA libraries from [upstream images of the Jupyter Docker stack](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#cuda-enabled-variants).  At this time, Jupyter builds `pytorch` images for the last two CUDA variants (12 & 11) and the `tensorflow` images only for the latest version of CUDA (12). CUDA is only supported for x86_64 architectures, though non-cuda versions support aarch64 (amd64).    
+
+ CUDA Version | image
+ -------------|----------------------------------------------------------------------------------------------------
+ 12 | [`quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook) 
+ 12 | [`quay.io/jupyter/tensorflow-notebook:cuda12-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook) 
+ 11 | [`quay.io/jupyter/pytorch-notebook:cuda11-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook)
+
+
