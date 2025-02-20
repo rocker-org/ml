@@ -1,6 +1,7 @@
-FROM rocker/cuda
+# use rocker/cuda if NVIDIA drivers are needed, otherwise rocker/ml is a good choice
+FROM rocker/ml
 
-# When run as root, R automagically handles any necessary apt-gets
+# When run at build time, R automagically handles any necessary apt-gets
 COPY install.r install.r
 RUN Rscript install.r
 
