@@ -1,11 +1,7 @@
 name: CUDA Image
 on:
   workflow_dispatch: null
-  push:
-    paths: 
-      - Dockerfile
-      - environment.yml
-      - install.r
+  push: null
 jobs:
   build:
     runs-on: ubuntu-latest
