@@ -35,9 +35,9 @@ Rscript -e 'install.packages("bspm")'
 R_HOME=$(R RHOME)
 
 # must go first.  Only configure for ROOT user
-echo "options(bspm.sudo = TRUE)" >> /root/.Rprofile
-echo "options(bspm.version.check=FALSE)" >> /root/.Rprofile
-echo "suppressMessages(bspm::enable())" >> /root/.Rprofile
+#echo "options(bspm.sudo = TRUE)" >> /root/.Rprofile
+#echo "options(bspm.version.check=FALSE)" >> /root/.Rprofile
+#echo "suppressMessages(bspm::enable())" >> /root/.Rprofile
 
 chown root:staff ${R_HOME}/site-library
 chmod g+ws ${R_HOME}/site-library
