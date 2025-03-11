@@ -35,9 +35,9 @@ Rscript -e 'install.packages("bspm")'
 R_HOME=$(R RHOME)
 
 # must go first.  Only configure for ROOT user
-echo "options(bspm.sudo = TRUE)" >> ${HOME}/.Rprofile
-echo "options(bspm.version.check=FALSE)" >> ${HOME}/.Rprofile
-echo "suppressMessages(bspm::enable())" >> ${HOME}/.Rprofile
+echo "options(bspm.sudo = TRUE)" >> /root/.Rprofile
+echo "options(bspm.version.check=FALSE)" >> /root/.Rprofile
+echo "suppressMessages(bspm::enable())" >> /root/.Rprofile
 
 chown root:staff ${R_HOME}/site-library
 chmod g+ws ${R_HOME}/site-library
@@ -51,3 +51,4 @@ ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install
 ## switch non-root users from BSPM to r-universe if no sudo 
 wget https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile
 mv Rprofile ${R_HOME}/etc/Rprofile.site
+

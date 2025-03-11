@@ -37,7 +37,9 @@ Sys.unsetenv(c("CI", "GITHUB_ACTIONS"))
 if(is.na(Sys.getenv("GITHUB_PAT", NA))){
   dummy <- c('ghp_SXg', 'LNM', 'Tu4cnal', 'tdqkZtBojc3s563G', 'iqv')
   Sys.setenv(GITHUB_PAT = paste(dummy, collapse = 'e'))
-}
+} else {
+
+  options(bspm.sudo = TRUE)
 
 }
 })
