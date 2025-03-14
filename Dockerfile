@@ -13,9 +13,7 @@ USER root
 RUN curl -fsSL https://code-server.dev/install.sh | sh && rm -rf .cache 
 
 # apt utilities, code-server setup
-#RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash
-COPY install_utilities.sh /tmp/install_utilities.sh
-RUN bash /tmp/install_utilities.sh
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash
 
 ## Grant user sudoer privileges
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
