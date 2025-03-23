@@ -21,4 +21,5 @@ dependencies:
   - pip:
     - jupyter-tensorboard-proxy
     - jupyter-keepalive
+    - langchain-openai
 
