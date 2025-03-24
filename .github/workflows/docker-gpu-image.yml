@@ -1,7 +1,16 @@
 name: CUDA Image
 on:
   workflow_dispatch: null
-  push: null
+  push: 
+    paths: 
+    - Dockerfile
+    - environment.yml
+    - install.r
+    - vscode-extensions.txt
+    - install_utilities.sh
+    - install_r.sh
+    - install_rstudio.sh
+    - Rprofile
 jobs:
   build:
     runs-on: ubuntu-latest
