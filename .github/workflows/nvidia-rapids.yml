@@ -23,12 +23,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
           context: rapids
-      - name: Publish to Docker Registry
-        uses: elgohr/Publish-Docker-Github-Action@v5
-        with:
-          name: rocker/rapids
-          context: rapids 
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+
 
 
