@@ -1,4 +1,5 @@
-FROM rocker/cuda
+ARG BASE=quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04
+FROM $BASE
 
 RUN conda create -n rapids-25.02 -c rapidsai -c conda-forge -c nvidia rapids=25.02 python=3.12 cuda-version=12.8
 RUN conda install cuda-cudart cuda-version=12
