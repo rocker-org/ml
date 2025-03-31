@@ -1,5 +1,5 @@
 FROM nvcr.io/nvidia/rapidsai/notebooks:25.02-cuda12.0-py3.12
-RUN mamba install -c conda-forge --yes jupyterhub notebook
+RUN mamba install -c conda-forge --yes jupyterhub notebook encodings
 
 #USER root
 #RUN chown rapids:users /home/rapids/entrypoint.sh && chmod a+x /home/rapids/entrypoint.sh
