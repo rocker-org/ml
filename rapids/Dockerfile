@@ -5,7 +5,7 @@ RUN mamba install -c conda-forge --yes jupyterhub notebook
 #RUN chown rapids:users /home/rapids/entrypoint.sh && chmod a+x /home/rapids/entrypoint.sh
 #USER rapids
 
-ENV PYTHONHOME=""
+ENV LC_ALL=en_US.UTF-8
 ENTRYPOINT []
 CMD ["jupyter", "lab", "--ip", "0.0.0.0"]
 
