@@ -30,6 +30,8 @@ RUN apt-get update --yes && \
 ENV CONDA_DIR=/opt/conda \
     SHELL=/bin/bash \
     NB_USER="rapids" \
+    NB_GID=1000 \
+    NB_UID=1001 \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
     LANGUAGE=C.UTF-8
@@ -57,8 +59,15 @@ RUN mamba install -c conda-forge --yes \
     jupyter server --generate-config && \
     mamba clean --all -f -y && \
     jupyter lab clean && \
-    rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    rm -rf "/home/${NB_USER}/.cache/yarn" 
 
- WORKDIR "${HOME}"
+
+USER root
+RUN  fix-permissions "${CONDA_DIR}" && \
+     fix-permissions "/home/${NB_USER}"
+
+USER ${NB_USER}
+
+WORKDIR "${HOME}"
+
+
