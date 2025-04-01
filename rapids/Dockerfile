@@ -7,3 +7,5 @@ RUN mamba install \
   --yes \
   "jupyterhub-singleuser==4.*"
 
+CMD ["jupyter", "lab", "--ip", "0.0.0.0"]
+
