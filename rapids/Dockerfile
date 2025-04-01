@@ -54,6 +54,7 @@ RUN cd /usr/local/bin && wget https://raw.githubusercontent.com/jupyter/docker-s
 ENTRYPOINT ["tini", "-g", "--", "start.sh"]
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+WORKDIR /tmp
 RUN mamba install -c conda-forge --yes \
     jupyterhub-singleuser jupyterlab nbclassic 'notebook>=7.2.2' && \
     jupyter server --generate-config && \
