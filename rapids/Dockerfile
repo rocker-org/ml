@@ -59,15 +59,24 @@ RUN mamba install -c conda-forge --yes \
     jupyter server --generate-config && \
     mamba clean --all -f -y && \
     jupyter lab clean && \
-    rm -rf "/home/${NB_USER}/.cache/yarn" 
+    rm -rf "/home/${NB_USER}/.cache/yarn"
 
+# Configure container startup
+CMD ["start-notebook.py"]
+
+# Copy local files as late as possible to avoid cache busting
+COPY start-notebook.py start-notebook.sh start-singleuser.py start-singleuser.sh /usr/local/bin/
+COPY jupyter_server_config.py docker_healthcheck.py /etc/jupyter/
+
+ENV JUPYTER_PORT=8888
+EXPOSE $JUPYTER_PORT
 
 USER root
-RUN  fix-permissions "${CONDA_DIR}" && \
-     fix-permissions "/home/${NB_USER}"
+RUN fix-permissions "/home/${NB_USER}" && \
+    fix-permissions /etc/jupyter/ && \
+    fix-permissions "${CONDA_DIR}"
 
 USER ${NB_USER}
-
-WORKDIR "${HOME}"
+WORKDIR ${HOME}
 
 
