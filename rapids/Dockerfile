@@ -29,7 +29,7 @@ RUN apt-get update --yes && \
 # Configure environment
 ENV CONDA_DIR=/opt/conda \
     SHELL=/bin/bash \
-    NB_USER="rapds" \
+    NB_USER="rapids" \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
     LANGUAGE=C.UTF-8
