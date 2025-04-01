@@ -48,10 +48,10 @@ RUN mkdir /usr/local/bin/start-notebook.d && \
 
 USER rapids
 
+
+RUN cd /usr/local/bin && wget https://raw.githubusercontent.com/jupyter/docker-stacks/refs/heads/main/images/docker-stacks-foundation/run-hooks.sh && wget https://raw.githubusercontent.com/jupyter/docker-stacks/refs/heads/main/images/docker-stacks-foundation/start.sh && chmod a+rx start.sh && chmod a+rx run-hooks.sh
+
 ENTRYPOINT ["tini", "-g", "--", "start.sh"]
-
-RUN cd /usr/local/bin && wget https://raw.githubusercontent.com/jupyter/docker-stacks/refs/heads/main/images/docker-stacks-foundation/run-hooks.sh && wget https://raw.githubusercontent.com/jupyter/docker-stacks/refs/heads/main/images/docker-stacks-foundation/start.sh
-
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN mamba install -c conda-forge --yes \
