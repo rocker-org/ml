@@ -11,7 +11,7 @@ RUN mamba install -c conda-forge --yes jupyterhub notebook
 #USER rapids
 
 USER root
-RUN ap-get -qq update && apt-get install -y install locales 
+RUN apt-get -qq update && apt-get install -y install locales 
 RUN locale-gen en_US.UTF-8
 USER rapids
 
