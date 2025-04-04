@@ -1,15 +1,20 @@
-ARG BASE=quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04
-FROM $BASE
+FROM nvcr.io/nvidia/rapidsai/notebooks:25.02-cuda12.0-py3.12
+ENV CONDA_DIR=/opt/conda
+ENV NB_USER=jovyan
+ENTRYPOINT []
 
-RUN conda create -n rapids-25.02 -c rapidsai -c conda-forge -c nvidia rapids=25.02 python=3.12 cuda-version=12.8
-RUN conda install cuda-cudart cuda-version=12
-#RUN pip install \
-#  --extra-index-url=https://pypi.nvidia.com \
-#  cudf-cu12==25.2.* \
-#  dask-cudf-cu12==25.2.* \
-#  cuml-cu12==25.2.* \
-#  cugraph-cu12==25.2.*
+USER root
+RUN useradd -G users,conda -ms /bin/bash ${NB_USER} && \
+    cp -rp /home/rapids/. /home/${NB_USER}/ && \
+    chown -R ${NB_USER}:users /home/${NB_USER}
 
-RUN pip install polars[gpu] --extra-index-url=https://pypi.nvidia.com
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+USER ${NB_USER}
 
+RUN mamba install \
+  --channel conda-forge \
+  --yes \
+  "jupyterhub-singleuser==4.*"
+
+CMD ["jupyter", "lab", "--ip", "0.0.0.0"]
 
