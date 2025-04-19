@@ -1,4 +1,4 @@
-name: Spatial+CUDA extension
+name: CUDA Spatial extension
 on:
   workflow_dispatch: null
   push:
