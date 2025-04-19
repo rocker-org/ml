@@ -4,14 +4,19 @@ channels:
 dependencies:
   - boto3
   - cartopy
+  - cupy
+  - cupy-xarray
   - distributed
   - earthaccess
   - exactextract
   - fiona
   - fsspec
+  - gcsfs
   - geoarrow-types
   - geopandas
   - geocube
+  - h5netcdf
+  - icechunk
   - leafmap
   - libgdal-arrow-parquet
   - localtileserver
@@ -43,4 +48,4 @@ dependencies:
   - pip
   - pip:
     - git+https://github.com/boettiger-lab/cng-python.git
-
+    - pcodec

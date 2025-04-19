@@ -1,5 +1,6 @@
 # use rocker/cuda if NVIDIA drivers are needed, otherwise rocker/ml is a good choice
-FROM rocker/ml
+ARG BASE=rocker/ml
+FROM $BASE 
 
 # When run at build time, R automagically handles any necessary apt-gets
 COPY install.r install.r
