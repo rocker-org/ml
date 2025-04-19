@@ -21,7 +21,7 @@ steps:
       - name: Publish to GitHub Container Registry
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
-          name: rocker-org/ml-spatial
+          name: rocker-org/cuda-spatial
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           buildargs: BASE
@@ -30,7 +30,7 @@ steps:
       - name: Publish to Docker Registry
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
-          name: rocker/ml-spatial
+          name: rocker/cuda-spatial
           context: extend
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
