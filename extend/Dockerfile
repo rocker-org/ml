@@ -8,8 +8,7 @@ RUN Rscript install.r
 
 ## Python extensions
 COPY environment.yml environment.yml
-RUN conda update --all --solver=classic -n base -c conda-forge conda && \
-    conda env update --file environment.yml
+RUN mamba env update --file environment.yml
 
 # GDAL
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES

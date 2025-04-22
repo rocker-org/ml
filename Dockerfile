@@ -35,6 +35,5 @@ COPY vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --install-extension < /tmp/vscode-extensions.txt
 
 COPY environment.yml /tmp/environment.yml
-RUN conda update --all --solver=classic -n base -c conda-forge conda && \
-    conda env update --file /tmp/environment.yml
+RUN mamba env update --file /tmp/environment.yml
 
