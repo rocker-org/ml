@@ -17,6 +17,7 @@ dependencies:
   - geocube
   - h5netcdf
   - icechunk
+  - jupytergis
   - leafmap
   - libgdal-arrow-parquet
   - localtileserver
