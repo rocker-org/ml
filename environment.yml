@@ -16,8 +16,10 @@ dependencies:
   - jupyterlab-myst
   - mystmd
   - minio
+  - plotnine
   - pypdf
   - pip
+  - seaborn
   - pip:
     - jupyter-tensorboard-proxy
     - jupyter-keepalive
