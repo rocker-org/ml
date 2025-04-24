@@ -6,3 +6,5 @@ posit.shiny
 reditorsupport.r
 continue.continue
 alefragnani.project-manager
+saoudrizwan.claude-dev
+
