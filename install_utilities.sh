@@ -3,7 +3,7 @@
 # some apt-get utilities. 
 # NOTE: BSPM will get those required for any R packages.
 apt-get update -qq && apt-get -y install \
-  vim git-lfs wget curl qpdf sudo libcurl4-openssl-dev libxml2-dev python3-venv gettext
+  vim git-lfs wget curl qpdf sudo libcurl4-openssl-dev libxml2-dev python3-venv gettext libssl-dev libcrypto++-dev
 
 # ensure user owns all of /opt/share (e.g. for vscode-plugins)
 mkdir /opt/share && chown -R ${NB_USER}:users /opt/share
