@@ -12,6 +12,7 @@ dependencies:
   - fiona
   - fsspec
   - gcsfs
+  - gdal
   - geoarrow-types
   - geopandas
   - geocube
