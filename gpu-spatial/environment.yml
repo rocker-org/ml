@@ -1,7 +1,18 @@
 name: base 
 channels:
   - conda-forge
+  - nvidia
+  - rapidsai
 dependencies:
+  - cupy
+  - cupy-xarray
+  - cudf=25.04
+  - cuspatial=25.04
+  - cuproj=25.04
+  - python=3.12
+  - 'cuda-version>=12.0,<=12.8'
+  - xarray-spatial
+## Regular
   - boto3
   - cartopy
   - distributed

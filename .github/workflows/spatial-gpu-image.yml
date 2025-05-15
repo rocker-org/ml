@@ -10,8 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions: write-all
-    env:
-      BASE: 'rocker/cuda'
     steps:
       - name: free extra disk space
         run: |
@@ -24,15 +22,13 @@ jobs:
           name: rocker-org/cuda-spatial
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          buildargs: BASE
           registry: ghcr.io
-          context: extend
+          context: gpu-spatial 
       - name: Publish to Docker Registry
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
           name: rocker/cuda-spatial
-          context: extend
+          context: gpu-spatial 
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
-          buildargs: BASE
 
