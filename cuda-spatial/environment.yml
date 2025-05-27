@@ -9,6 +9,7 @@ dependencies:
   - cudf=25.04
   - cuspatial=25.04
   - cuproj=25.04
+  - kvikio
   - python=3.12
   - 'cuda-version>=12.0,<=12.8'
   - xarray-spatial
