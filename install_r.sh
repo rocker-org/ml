@@ -44,8 +44,9 @@ chmod g+ws ${R_HOME}/site-library
 
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 
-## add user to sudoers -- not jupyterhub compatible
-# usermod -a -G staff ${NB_USER}
+usermod -a -G staff ${NB_USER}
+
+## add user to sudoers -- not jupyterhub compatible(?)
 # echo "${NB_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 ## switch non-root users from BSPM to r-universe if no sudo 
