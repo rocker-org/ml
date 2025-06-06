@@ -39,12 +39,16 @@ R_HOME=$(R RHOME)
 #echo "options(bspm.version.check=FALSE)" >> /root/.Rprofile
 #echo "suppressMessages(bspm::enable())" >> /root/.Rprofile
 
+# packages installed by root / bspm will go in /usr/lib/R/site-library
 chown root:staff ${R_HOME}/site-library
 chmod g+ws ${R_HOME}/site-library
 
+# to avoid permission clashes, user-installed packages go in /usr/local/lib/R/site-library
+chown ${NB_USER}:users /usr/local/lib/R/site-library
+usermod -a -G staff ${NB_USER}
+
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 
-usermod -a -G staff ${NB_USER}
 
 ## add user to sudoers -- not jupyterhub compatible(?)
 # echo "${NB_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
@@ -52,4 +56,5 @@ usermod -a -G staff ${NB_USER}
 ## switch non-root users from BSPM to r-universe if no sudo 
 wget https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile
 mv Rprofile ${R_HOME}/etc/Rprofile.site
+
 
