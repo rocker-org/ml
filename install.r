@@ -1,4 +1,5 @@
 install.packages(c(
+'archive',
 'languageserver',
 'httpgd',
 'quarto',
