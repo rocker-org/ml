@@ -72,6 +72,6 @@ echo "lock-type=advisory" >/etc/rstudio/file-locks
 cp /etc/rstudio/rserver.conf /etc/rstudio/disable_auth_rserver.conf
 echo "auth-none=1" >>/etc/rstudio/disable_auth_rserver.conf
 
-
-su ${NB_USER} -c "/opt/conda/bin/conda install -y jupyter-rsession-proxy"
+# don't assume conda, let package manager handle this
+# su ${NB_USER} -c "/opt/conda/bin/conda install -y jupyter-rsession-proxy"
 

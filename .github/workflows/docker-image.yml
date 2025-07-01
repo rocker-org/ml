@@ -6,6 +6,8 @@ on:
       - Dockerfile
       - environment.yml
       - install.r
+      - install_r.sh
+      - install_rstudio.sh
 jobs:
   build:
     runs-on: ubuntu-latest
