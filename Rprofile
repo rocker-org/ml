@@ -32,6 +32,8 @@ local({
     options(bspm.sudo = TRUE)
     options(bspm.version.check=FALSE)
     suppressMessages(bspm::enable())
+    # workaround for install.packages() stdin hang in RStudio session
+    assignInNamespace("system2nowarn", function(...) suppressWarnings(system2(..., stdin="/dev/null")), "bspm")
 
   }
 
