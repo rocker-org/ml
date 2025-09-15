@@ -10,6 +10,7 @@ dependencies:
   - ibis-duckdb
   - jupyterlab-myst
   - jupyter-ai
+  - jupyterlab-git
   - jupyter-resource-usage
   - jupyter-rsession-proxy
   - jupyter-vscode-proxy
