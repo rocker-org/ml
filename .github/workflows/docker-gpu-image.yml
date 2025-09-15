@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     env:
-      BASE: 'quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04'
+      BASE: 'quay.io/jupyter/pytorch-notebook:cuda12-python-3.12'
     steps:
     # For biggish images, github actions runs out of disk space.
     # So we cleanup some unwanted things in the disk image, and reclaim that space for our docker use

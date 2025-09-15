@@ -1,4 +1,4 @@
-ARG BASE=quay.io/jupyter/minimal-notebook:ubuntu-24.04
+ARG BASE=quay.io/jupyter/minimal-notebook:python-3.12
 
 # cuda image uses:
 # ARG BASE=quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04
