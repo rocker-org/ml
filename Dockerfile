@@ -29,7 +29,8 @@ USER ${NB_USER}
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
 COPY install.r /tmp/install.r
-RUN Rscript /tmp/install.r && sudo chgrp -R users /usr/lib/R/site_library
+RUN Rscript /tmp/install.r 
+RUN ls -l /usr/lib/R && sudo chgrp -R users /usr/lib/R/site-library
 
 
 COPY vscode-extensions.txt /tmp/vscode-extensions.txt
