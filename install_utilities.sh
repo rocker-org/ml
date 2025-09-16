@@ -29,7 +29,7 @@ git config --system user.name "Default User"
 git config --system user.email "email@example.com" 
 
 # uv install, clean-up
-curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR="/usr/local/bin" sh && rm -rf $HOME/.config/uv
+curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR="/usr/local/bin" sh && rm -rf /home/${NB_USER}/.config/uv
 
 ## terminal preferences
 echo '"\e[5~": history-search-backward' >> /etc/inputrc && \
@@ -38,5 +38,4 @@ echo '"\e[6~": history-search-forward' >> /etc/inputrc
 # Optional credential manager for RStudio/Jupyter users. -- code-server extension provides easier alternative. 
 # wget https://github.com/git-ecosystem/git-credential-manager/releases/download/v2.6.0/gcm-linux_amd64.2.6.0.deb && dpkg -i gcm-*.deb && rm gcm-*.deb
 # git-credential-manager configure --system
-
 
