@@ -32,7 +32,8 @@ USER ${NB_USER}
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
 COPY install.r /tmp/install.r
-RUN Rscript /tmp/install.r
+RUN Rscript /tmp/install.r && chgrp -R users /usr/lib/R/site_library
+
 
 COPY vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt
