@@ -28,8 +28,8 @@ git config --system pull.rebase true && \
 git config --system user.name "Default User"
 git config --system user.email "email@example.com" 
 
-# uv install
-curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR="/usr/local/bin" sh
+# uv install, clean-up
+curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR="/usr/local/bin" sh && rm -rf $HOME/.config/uv
 
 ## terminal preferences
 echo '"\e[5~": history-search-backward' >> /etc/inputrc && \
