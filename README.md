@@ -26,7 +26,7 @@ See technical details below.
 
 ### JupyterHub
 
-These images are designed to support easy intergration with [JupyterHub]((https://jupyter.org/hub) and related platforms.  (See technical details below).  
+These images are designed to support easy integration with [JupyterHub](https://jupyter.org/hub) and related platforms.  (See technical details below).  
 
 ### Binder
 
