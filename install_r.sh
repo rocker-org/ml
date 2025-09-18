@@ -40,12 +40,9 @@ R_HOME=$(R RHOME)
 #echo "suppressMessages(bspm::enable())" >> /root/.Rprofile
 
 # packages installed by root / bspm will go in /usr/lib/R/site-library
-chown root:users ${R_HOME}/site-library
-chmod g+ws ${R_HOME}/site-library
-
-# to avoid permission clashes, user-installed packages go in /usr/local/lib/R/site-library
-chown ${NB_USER}:users /usr/local/lib/R/site-library
 usermod -a -G users ${NB_USER}
+chgrp -R users /usr/local/lib/R/site-library
+chgrp -R users /usr/lib/R/site-library
 
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 
