@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     env:
-      BASE: 'rocker-org/cuda'
+      BASE: 'ghcr.io/rocker-org/cuda'
     steps:
       - name: free extra disk space
         run: |
