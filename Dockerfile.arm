@@ -1,5 +1,5 @@
 ARG BASE=nvcr.io/nvidia/rapidsai/base:25.10-cuda13-py3.13
-
+ENV NB_USER=rapids
 # cuda image uses:
 # ARG BASE=quay.io/jupyter/pytorch-notebook:cuda12-python-3.12
 
