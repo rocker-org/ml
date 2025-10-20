@@ -3,9 +3,7 @@ on:
   workflow_dispatch: null
   push:
     paths: 
-      - extend/Dockerfile
-      - extend/environment.yml
-      - extend/install.r
+      - cuda-spatial
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,13 +24,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
-          context: extend
+          context: cuda-spatial
       - name: Publish to Docker Registry
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
           name: rocker/cuda-spatial
           buildargs: BASE          
-          context: extend
+          context: cuda-spatial
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
