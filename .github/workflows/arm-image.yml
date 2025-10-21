@@ -5,7 +5,7 @@ on:
     paths: 
       - Dockerfile.arm
       - environment.yml
-      - install.r
+      - install_arm.r
       - install_r.sh
       - install_rstudio.sh
       - install_utilities.sh
