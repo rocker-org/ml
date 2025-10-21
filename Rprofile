@@ -13,7 +13,9 @@ local({
   if (!has_sudo()) {
 
     rver <- getRversion()
-    distro <- system2('lsb_release', '-sc', stdout = TRUE)
+    distro <- sub('.*=', '', grep('VERSION_CODENAME=', readLines('/etc/os-release'), value = TRUE)[1])
+
+    ## Not sure this is working.  Consider pak
     options(HTTPUserAgent = sprintf("R/%s R (%s)", rver, paste(rver, R.version$platform, R.version$arch, R.version$os)))
     options(repos = c(CRAN = sprintf("https://packagemanager.rstudio.com/all/__linux__/%s/latest", distro)))
 
@@ -28,6 +30,8 @@ local({
       options(repos = c(binaries = binaries, universe = my_repos, getOption("repos")))
     }
   } else {
+
+    options(repos = c(CRAN = "https://cloud.r-project.org"))
 
     options(bspm.sudo = TRUE)
     options(bspm.version.check=FALSE)

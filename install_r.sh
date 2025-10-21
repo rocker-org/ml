@@ -43,6 +43,8 @@ R_HOME=$(R RHOME)
 usermod -a -G users ${NB_USER}
 chgrp -R users /usr/local/lib/R/site-library
 chgrp -R users /usr/lib/R/site-library
+chmod -R g+ws /usr/local/lib/R/site-library
+chmod -R g+ws /usr/lib/R/site-library
 
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 

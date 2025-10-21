@@ -19,10 +19,14 @@ RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/in
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
 # Install R
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
+#RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
+COPY install_r.sh install_r.sh
+RUN bash install_r.sh
 
 # RStudio not available for arm
 # RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_rstudio.sh | bash
+
+COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
@@ -30,7 +34,7 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 USER ${NB_USER}
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
-COPY install.r /tmp/install.r
+COPY install_arm.r /tmp/install.r
 RUN Rscript /tmp/install.r 
 RUN ls -l /usr/lib/R && sudo chgrp -R users /usr/lib/R/site-library
 
@@ -38,6 +42,6 @@ RUN ls -l /usr/lib/R && sudo chgrp -R users /usr/lib/R/site-library
 COPY vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt
 
-COPY environment.yml /tmp/environment.yml
-RUN mamba env update --file /tmp/environment.yml
+#COPY environment.yml /tmp/environment.yml
+#RUN mamba env update --file /tmp/environment.yml
 
