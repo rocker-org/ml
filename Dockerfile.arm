@@ -8,6 +8,8 @@ FROM $BASE
 ENV CODE_EXTENSIONSDIR=/opt/share/code-server
 ENV NB_USER=rapids
 
+RUN mamba install jupyterhub-singleuser
+
 USER root
 # code-server (VSCode)
 RUN curl -fsSL https://code-server.dev/install.sh | sh && rm -rf .cache 
