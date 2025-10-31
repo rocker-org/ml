@@ -50,7 +50,7 @@ chmod -R g+ws /usr/local/lib/R/site-library
 chmod -R g+ws /usr/lib/R/site-library
 
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
-
+ln -s /usr/lib/R/site-library/littler/examples/installRub.r /usr/local/bin/installRub.r
 
 ## add user to sudoers -- not jupyterhub compatible(?)
 # echo "${NB_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
