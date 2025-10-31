@@ -30,7 +30,7 @@ jobs:
       - name: Publish to GitHub Container Registry
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
-          name: rocker-org/ml
+          name: rocker-org/cuda
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
@@ -40,7 +40,7 @@ jobs:
       - name: Publish to Docker Registry
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
-          name: rocker/ml
+          name: rocker/cuda
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
           dockerfile: Dockerfile.arm
