@@ -8,6 +8,9 @@ ENV PYTHONBUFFERED=1
 # Don't prompt in apt commands
 ENV DEBIAN_FRONTEND=noninteractive
 
+# persistent install for vscode extensions
+ENV CODE_EXTENSIONSDIR=/opt/share/code-server
+
 # Set up JupyterLab user
 ENV NB_USER=jovyan
 ENV NB_UID=1000

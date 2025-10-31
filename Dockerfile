@@ -39,3 +39,5 @@ RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-ext
 COPY environment.yml /tmp/environment.yml
 RUN mamba env update --file /tmp/environment.yml
 
+CMD ["jupyter", "lab", "--no-browser", "--ip=0.0.0.0"]
+
