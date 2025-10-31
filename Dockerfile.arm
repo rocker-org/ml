@@ -68,7 +68,7 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 
 WORKDIR /home/$NB_USER 
 USER $NB_USER
-RUN mamba install jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-tensorbard-proxy jupyter-keepalive
+RUN mamba install jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-tensorboard-proxy
 RUN mamba install plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances 
 
 
