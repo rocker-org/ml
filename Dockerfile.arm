@@ -65,8 +65,8 @@ COPY Rprofile /usr/lib/R/etc/Rprofile.site
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 
-#RUN chown -R $NB_USER /opt/conda/envs
-RUN cp /home/$NB_USER/.bashrc /etc/profile.d/bashrc
+# activate notebook by default (created later)
+RUN sed 's/conda activate base/conda activate notebook/' /home/$NB_USER/.bashrc > /etc/profile.d/bashrc
 
 WORKDIR /home/$NB_USER 
 USER $NB_USER
