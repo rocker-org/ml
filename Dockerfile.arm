@@ -36,7 +36,9 @@ RUN usermod -d /home/jovyan -m jovyan
 # Copy entrypoint to a safe location before home gets mounted over
 RUN cp /home/jovyan/entrypoint.sh /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh && \
-    chown 1000:1000 /usr/local/bin/entrypoint.sh
+    chown 1000:1000 /usr/local/bin/entrypoint.sh && \
+    sed -i '4i . /opt/conda/etc/profile.d/conda.sh' && \
+    sed -i sed '4i conda activate notebook' entrypoint.sh
 
 # Set the new entrypoint location
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
