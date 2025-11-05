@@ -26,23 +26,57 @@ if [ "$RSTUDIO_VERSION" = "latest" ]; then
     RSTUDIO_VERSION="stable"
 fi
 
-if [ "$UBUNTU_CODENAME" = "focal" ]; then
-    UBUNTU_CODENAME="bionic"
-fi
-
-# TODO: remove this workaround for Ubuntu 24.04
-if [ "$UBUNTU_CODENAME" = "noble" ]; then
-    UBUNTU_CODENAME="jammy"
-fi
-
-if [ "$RSTUDIO_VERSION" = "stable" ] || [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
-    if [ "$UBUNTU_CODENAME" = "bionic" ]; then
-        UBUNTU_CODENAME="focal"
+# Handle ARM64 architecture
+# ARM64 builds are only available for jammy (22.04), not focal, bionic, or noble
+if [ "$ARCH" = "arm64" ]; then
+    echo "Detected ARM64 architecture, using appropriate RStudio Server build..."
+    
+    # ARM64 builds only available for Ubuntu 22.04 (jammy)
+    # Noble (24.04) doesn't have separate ARM64 builds yet, use jammy
+    if [ "$UBUNTU_CODENAME" != "jammy" ]; then
+        echo "Using jammy build for ARM64 (current codename: $UBUNTU_CODENAME)..."
+        UBUNTU_CODENAME="jammy"
     fi
-    wget "https://rstudio.org/download/latest/${RSTUDIO_VERSION}/server/${UBUNTU_CODENAME}/rstudio-server-latest-${ARCH}.deb" -O "$DOWNLOAD_FILE"
-else
-    wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE" ||
+    
+    if [ "$RSTUDIO_VERSION" = "stable" ]; then
+        # Use latest stable version from S3 bucket (verified working)
+        # Current stable version as of Nov 2025
+        RSTUDIO_VERSION="2025.09.2-418"
+        echo "Downloading RStudio Server ${RSTUDIO_VERSION} for ARM64..."
+        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
+    elif [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
+        # Use daily builds for preview/daily
+        # Get the latest daily build number - using a recent known working version
+        RSTUDIO_VERSION="2025.12.0-daily-302"
+        echo "Downloading RStudio Server daily build ${RSTUDIO_VERSION} for ARM64..."
+        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
+    else
+        # User specified a specific version
+        echo "Downloading RStudio Server ${RSTUDIO_VERSION} for ARM64..."
         wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
+    fi
+else
+    # AMD64/x86_64 architecture - use standard installation
+    
+    # Apply Ubuntu codename conversions for x86_64
+    if [ "$UBUNTU_CODENAME" = "focal" ]; then
+        UBUNTU_CODENAME="bionic"
+    fi
+    
+    # TODO: remove this workaround for Ubuntu 24.04
+    if [ "$UBUNTU_CODENAME" = "noble" ]; then
+        UBUNTU_CODENAME="jammy"
+    fi
+    
+    if [ "$RSTUDIO_VERSION" = "stable" ] || [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
+        if [ "$UBUNTU_CODENAME" = "bionic" ]; then
+            UBUNTU_CODENAME="focal"
+        fi
+        wget "https://rstudio.org/download/latest/${RSTUDIO_VERSION}/server/${UBUNTU_CODENAME}/rstudio-server-latest-${ARCH}.deb" -O "$DOWNLOAD_FILE"
+    else
+        wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE" ||
+            wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
+    fi
 fi
 
 gdebi --non-interactive "$DOWNLOAD_FILE"

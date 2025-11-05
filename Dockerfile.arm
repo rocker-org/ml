@@ -1,5 +1,24 @@
 ARG BASE=nvcr.io/nvidia/rapidsai/notebooks:25.10-cuda13-py3.13
-FROM $BASE
+
+###############################################################################
+# Builder stage: Install conda packages and fix ownership
+###############################################################################
+FROM $BASE as builder
+
+USER root
+
+# Install additional conda packages into base environment
+RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
+    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances
+
+# Change ownership of conda to UID 1000 (this won't bloat final image)
+RUN chown -R 1000:1000 /opt/conda
+
+###############################################################################
+# Final stage
+###############################################################################
+FROM rapidsai/miniforge-cuda:25.12-cuda13.0.1-base-ubuntu24.04-py3.13
+
 
 # Use bash as default shell instead of sh
 ENV SHELL=/bin/bash
@@ -20,29 +39,11 @@ ENV HOME="/home/${NB_USER}"
 USER root
 # Remove the useless 'ubuntu' user that currently has UID 1000
 RUN userdel -r ubuntu
+RUN useradd -rm -d /home/jovyan -s /bin/bash -g conda -u 1000 jovyan
 
-# Change rapids' UID from 1001 to 1000
-# This ONLY modifies /etc/passwd, NOT the filesystem
-RUN usermod -u 1000 rapids
-
-# Rename rapids to jovyan
-RUN usermod -l jovyan rapids
-
-# Move and fix the home directory
-RUN usermod -d /home/jovyan -m jovyan
-
-
-
-# Copy entrypoint to a safe location before home gets mounted over
-RUN cp /home/jovyan/entrypoint.sh /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh && \
-    chown 1000:1000 /usr/local/bin/entrypoint.sh && \
-    sed -i '4i . /opt/conda/etc/profile.d/conda.sh; conda activate notebook' /usr/local/bin/entrypoint.sh
-
-# Set the new entrypoint location
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-RUN groupadd --gid ${NB_UID} ${NB_USER}
+RUN apt-get update && apt-get -y install curl && rm -rf /var/lib/apt/lists/*
+# Copy the modified conda from builder (with packages installed and correct ownership)
+COPY --from=builder --chown=1000:1000 /opt/conda /opt/conda
 
 # install vscode
 RUN curl -fsSL https://code-server.dev/install.sh | sh && rm -rf .cache 
@@ -58,7 +59,9 @@ RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoer
 COPY install_r.sh install_r.sh
 RUN bash install_r.sh
 
-# RStudio not available for arm
+# RStudio
+COPY install_rstudio.sh install_rstudio.sh
+RUN bash install_rstudio.sh
 # RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_rstudio.sh | bash
 
 COPY Rprofile /usr/lib/R/etc/Rprofile.site
@@ -66,8 +69,8 @@ COPY Rprofile /usr/lib/R/etc/Rprofile.site
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 
-# activate notebook by default (created later)
-RUN sed 's/conda activate base/conda activate notebook/' /home/$NB_USER/.bashrc > /etc/profile.d/bashrc
+# activate base by default in bashrc
+# RUN sed 's/conda activate base/conda activate base/' /home/$NB_USER/.bashrc > /etc/profile.d/bashrc
 
 WORKDIR /home/$NB_USER 
 USER $NB_USER
@@ -83,10 +86,7 @@ RUN Rscript /tmp/install.r
 COPY install_spatial.r /tmp/install.r
 RUN Rscript /tmp/install.r 
 
-RUN conda create -p /opt/conda/envs/notebook jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage
-RUN . /opt/conda/etc/profile.d/conda.sh; conda activate notebook && mamba install plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances
-
-
+USER $NB_USER
 
 CMD ["jupyter", "lab", "--no-browser", "--ip=0.0.0.0"]
 
