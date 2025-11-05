@@ -4,6 +4,11 @@ set -e
 RSTUDIO_VERSION=${1:-${RSTUDIO_VERSION:-"stable"}}
 NB_USER=${NB_USER:-"jovyan"}
 
+export DEBIAN_FRONTEND=noninteractive
+
+# Fix any interrupted dpkg processes
+dpkg --configure -a
+
 apt-get update && apt-get -y install \
     ca-certificates \
     gdebi-core \
