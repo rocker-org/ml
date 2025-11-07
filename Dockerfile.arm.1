@@ -1,0 +1,15 @@
+ARG BASE=nvcr.io/nvidia/rapidsai/notebooks:25.10-cuda13-py3.13
+
+###############################################################################
+# Builder stage: Install conda packages and fix ownership
+###############################################################################
+FROM $BASE as builder
+
+USER root
+
+# Install additional conda packages into base environment
+RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
+    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances
+
+# Change ownership of conda to UID 1000 (this won't bloat final image)
+RUN chown -R 1000:1000 /opt/conda
