@@ -1,4 +1,4 @@
-name: ARM64 Image
+name: ARM64 pre-build base
 on:
   workflow_dispatch: null
   push:
