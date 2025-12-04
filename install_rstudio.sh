@@ -11,7 +11,7 @@ dpkg --configure -a
 
 apt-get update && apt-get -y install \
     ca-certificates \
-    gdebi \
+    gdebi-core \
     git \
     libclang-dev \
     libssl-dev \
