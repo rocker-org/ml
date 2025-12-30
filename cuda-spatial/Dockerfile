@@ -8,7 +8,7 @@ RUN Rscript install.r
 
 ## Python extensions
 COPY environment.yml environment.yml
-RUN mamba env update --file environment.yml
+RUN mamba env update --file environment.yml --no-update-deps
 
 # GDAL
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES

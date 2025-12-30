@@ -37,7 +37,7 @@ COPY vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt
 
 COPY environment.yml /tmp/environment.yml
-RUN mamba env update --file /tmp/environment.yml
+RUN mamba env update --file /tmp/environment.yml --no-update-deps
 
 CMD ["jupyter", "lab", "--no-browser", "--ip=0.0.0.0"]
 
