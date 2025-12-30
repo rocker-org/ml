@@ -47,5 +47,6 @@ dependencies:
   - zarr
   - pip
   - pip:
-    - git+https://github.com/boettiger-lab/cng-python.git
     - pcodec
+
+
