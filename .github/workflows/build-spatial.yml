@@ -9,21 +9,6 @@ on:
 jobs:
   build:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - image: ml-spatial
-            context: extend
-            tags: |
-              ghcr.io/rocker-org/ml-spatial:latest
-              rocker/ml-spatial:latest
-          - image: cuda-spatial
-            context: cuda-spatial
-            tags: |
-              ghcr.io/rocker-org/cuda-spatial:latest
-              rocker/cuda-spatial:latest
-
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -53,10 +38,16 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push ${{ matrix.image }}
+      - name: Build and Push
         uses: docker/build-push-action@v4
         with:
-          context: ${{ matrix.context }}
+          context: extend
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ matrix.tags }}
+          tags: |
+            ghcr.io/rocker-org/ml-spatial:latest
+            rocker/ml-spatial:latest
+            ghcr.io/rocker-org/cuda-spatial:latest
+            rocker/cuda-spatial:latest
+          build-args: |
+            BASE=rocker/ml

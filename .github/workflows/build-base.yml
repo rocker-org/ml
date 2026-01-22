@@ -12,23 +12,6 @@ on:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - image: ml
-            base: quay.io/jupyter/minimal-notebook:python-3.12
-            nb_user: jovyan
-            tags: |
-              ghcr.io/rocker-org/ml:latest
-              rocker/ml:latest
-          - image: cuda
-            base: rapidsai/ci-conda:latest
-            nb_user: ubuntu
-            tags: |
-              ghcr.io/rocker-org/cuda:latest
-              rocker/cuda:latest
-
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -58,14 +41,18 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push ${{ matrix.image }}
+      - name: Build and Push
         uses: docker/build-push-action@v4
         with:
           context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ matrix.tags }}
+          tags: |
+            ghcr.io/rocker-org/ml:latest
+            rocker/ml:latest
+            ghcr.io/rocker-org/cuda:latest
+            rocker/cuda:latest
           build-args: |
-            BASE=${{ matrix.base }}
-            NB_USER=${{ matrix.nb_user }}
+            BASE=rapidsai/ci-conda:latest
+            NB_USER=ubuntu
