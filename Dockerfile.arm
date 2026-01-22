@@ -1,49 +1,36 @@
-ARG BASE=nvcr.io/nvidia/rapidsai/notebooks:25.10-cuda13-py3.13
+ARG BASE=rapidsai/ci-conda
+FROM $BASE
 
-###############################################################################
-# Builder stage: Install conda packages and fix ownership
-###############################################################################
-FROM $BASE as builder
-
-USER root
-
-# Install additional conda packages into base environment
-RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
-    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances
-
-# Change ownership of conda to UID 1000 (this won't bloat final image)
-RUN chown -R 1000:1000 /opt/conda
-
-###############################################################################
-# Final stage
-###############################################################################
-FROM rapidsai/miniforge-cuda:25.12-cuda13.0.1-base-ubuntu24.04-py3.13
-
-
-# Use bash as default shell instead of sh
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
 ENV PYTHONBUFFERED=1
 # Don't prompt in apt commands
 ENV DEBIAN_FRONTEND=noninteractive
-
 # persistent install for vscode extensions
 ENV CODE_EXTENSIONSDIR=/opt/share/code-server
 
 # Set up JupyterLab user
-ENV NB_USER=jovyan
+ENV NB_USER=ubuntu
 ENV NB_UID=1000
 ENV USER="${NB_USER}"
 ENV HOME="/home/${NB_USER}"
 
-USER root
-# Remove the useless 'ubuntu' user that currently has UID 1000
-RUN userdel -r ubuntu
-RUN useradd -rm -d /home/jovyan -s /bin/bash -g conda -u 1000 jovyan
 
+USER root
+RUN usermod -aG conda $NB_USER
+
+# Fix permissions on /opt/conda directories so user can write to them
+# We only change directories to avoid copying all file data (doubling image size)
+RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
+    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} +
+
+USER ubuntu
+# Install additional conda packages into base environment
+RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
+    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances
+
+USER root
 RUN apt-get update && apt-get -y install curl && rm -rf /var/lib/apt/lists/*
-# Copy the modified conda from builder (with packages installed and correct ownership)
-COPY --from=builder --chown=1000:1000 /opt/conda /opt/conda
 
 # install vscode
 RUN curl -fsSL https://code-server.dev/install.sh | sh && rm -rf .cache 
