@@ -114,3 +114,5 @@ echo "auth-none=1" >>/etc/rstudio/disable_auth_rserver.conf
 # don't assume conda, let package manager handle this
 # su ${NB_USER} -c "/opt/conda/bin/conda install -y jupyter-rsession-proxy"
 
+rm -rf /var/lib/apt/lists/*
+

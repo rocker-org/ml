@@ -60,3 +60,5 @@ wget https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile
 mv Rprofile ${R_HOME}/etc/Rprofile.site
 
 
+
+rm -rf /var/lib/apt/lists/*

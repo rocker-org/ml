@@ -39,4 +39,7 @@ echo '"\e[6~": history-search-forward' >> /etc/inputrc
 # wget https://github.com/git-ecosystem/git-credential-manager/releases/download/v2.6.0/gcm-linux_amd64.2.6.0.deb && dpkg -i gcm-*.deb && rm gcm-*.deb
 # git-credential-manager configure --system
 
+
 chown -R ${NB_USER}:users /home/${NB_USER}/
+
+rm -rf /var/lib/apt/lists/*

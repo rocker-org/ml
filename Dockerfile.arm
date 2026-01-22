@@ -27,7 +27,8 @@ RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
 USER ubuntu
 # Install additional conda packages into base environment
 RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
-    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances
+    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances && \
+    mamba clean -afy
 
 USER root
 RUN apt-get update && apt-get -y install curl && rm -rf /var/lib/apt/lists/*
