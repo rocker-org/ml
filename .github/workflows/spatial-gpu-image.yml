@@ -1,11 +1,13 @@
 name: CUDA Spatial extension
 on:
   workflow_dispatch: null
-  push:
-    paths: 
-      - cuda-spatial
+  workflow_run:
+    workflows: ["CUDA Image"]
+    types: 
+      - completed
 jobs:
   build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions: write-all
     env:

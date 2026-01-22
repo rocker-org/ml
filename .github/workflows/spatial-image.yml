@@ -1,13 +1,13 @@
 name: Spatial extension
 on:
   workflow_dispatch: null
-  push:
-    paths: 
-      - extend/Dockerfile
-      - extend/environment.yml
-      - extend/install.r
+  workflow_run:
+    workflows: ["ML Image"]
+    types: 
+      - completed
 jobs:
   build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
