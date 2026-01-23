@@ -1,6 +1,9 @@
 name: Build Bases
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
   push:
     paths:
       - Dockerfile
