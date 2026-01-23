@@ -1,6 +1,15 @@
 name: Build Spatial
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'extend/Dockerfile'
+      - 'extend/environment.yml'
+  pull_request:
+    paths:
+      - 'extend/Dockerfile'
+      - 'extend/environment.yml'
   workflow_run:
     workflows: ["Build Bases"]
     types:
@@ -8,7 +17,7 @@ on:
 
 jobs:
   build:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
