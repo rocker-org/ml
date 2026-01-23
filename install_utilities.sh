@@ -17,9 +17,6 @@ curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip
 rm -rf aws/
 rm -r awscliv2.zip
 
-# minio client for S3 use
-curl https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc
-
 # optional git config
 git config --system pull.rebase true && \
 # git config --system credential.credentialStore cache && \
