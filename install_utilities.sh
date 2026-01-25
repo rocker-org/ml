@@ -37,6 +37,9 @@ echo '"\e[6~": history-search-forward' >> /etc/inputrc
 # git-credential-manager configure --system
 
 
+# opencode cli
+curl -fsSL https://opencode.ai/install | bash
+
 chown -R ${NB_USER}:users /home/${NB_USER}/
 
 rm -rf /var/lib/apt/lists/*

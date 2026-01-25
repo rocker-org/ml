@@ -6,5 +6,5 @@ posit.shiny
 reditorsupport.r
 alefragnani.project-manager
 posit.air-vscode
-sst-dev.opencode
+RooVeterinaryInc.roo-cline
 
