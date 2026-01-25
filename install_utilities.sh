@@ -38,7 +38,7 @@ echo '"\e[6~": history-search-forward' >> /etc/inputrc
 
 
 # opencode cli
-# curl -fsSL https://opencode.ai/install | bash
+curl -fsSL https://opencode.ai/install | bash
 
 chown -R ${NB_USER}:users /home/${NB_USER}/
 
