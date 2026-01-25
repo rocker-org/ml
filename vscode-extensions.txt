@@ -5,6 +5,6 @@ quarto.quarto
 posit.shiny
 reditorsupport.r
 alefragnani.project-manager
-saoudrizwan.claude-dev
 posit.air-vscode
+sst-dev.opencode
 
