@@ -18,6 +18,11 @@ ENV HOME="/home/${NB_USER}"
 
 
 USER root
+
+# change ubuntu to jovyan (consistent with Jupyter stacks for home dir mapping)
+RUN usermod -l ${NB_USER} ubuntu && \
+    usermod -d /home/${NB_USER} -m ${NB_USER}
+
 # Create conda group if it doesn't exist, and add user to it
 RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
 
