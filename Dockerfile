@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV CODE_EXTENSIONSDIR=/opt/share/code-server
 
 # Set up JupyterLab user
-ARG NB_USER=ubuntu
+ARG NB_USER=jovyan
 ENV NB_USER=${NB_USER}
 ENV NB_UID=1000
 ENV USER="${NB_USER}"
