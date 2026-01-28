@@ -8,21 +8,15 @@ dependencies:
   - glances
   - git-filter-repo
   - ibis-duckdb
-  - jupyterlab-myst
-  - jupyter-ai
-  - jupyterlab-git
   - jupyter-resource-usage
   - jupyter-rsession-proxy
   - jupyter-vscode-proxy
-  - jupyterlab-myst
-  - mystmd
-  - minio
+  - jupyterhub-singleuser
+  - jupyterlab-git
+  - pip
   - plotnine
   - pypdf
-  - pip
-  - seaborn
   - pip:
     - jupyter-tensorboard-proxy
     - jupyter-keepalive
-    - langchain-openai
 

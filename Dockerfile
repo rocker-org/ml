@@ -35,8 +35,9 @@ RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
 
 USER ${NB_USER}
 # Install additional conda packages into base environment
+COPY environment.yml /tmp/environment.yml
 RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
-    mamba install -y jupyterhub-singleuser jupyter-vscode-proxy jupyter-resource-usage jupyter-rsession-proxy plotnine ibis-duckdb duckdb-engine minio git-filter-repo glances && \
+    mamba env update --file /tmp/environment.yml && \
     mamba clean -afy
 
 USER root
@@ -52,14 +53,12 @@ RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/in
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
 # Install R
-#RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
 COPY install_r.sh install_r.sh
 RUN bash install_r.sh
 
 # RStudio
 COPY install_rstudio.sh install_rstudio.sh
 RUN bash install_rstudio.sh
-# RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_rstudio.sh | bash
 
 COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
