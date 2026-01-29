@@ -15,7 +15,10 @@ dependencies:
   - jupyterlab-git
   - pip
   - plotnine
+  - polars-gpu
   - pypdf
+  - torch
+  - cudf
   - pip:
     - jupyter-tensorboard-proxy
     - jupyter-keepalive

@@ -36,8 +36,7 @@ RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
 USER ${NB_USER}
 # Install additional conda packages into base environment
 COPY environment.yml /tmp/environment.yml
-RUN . /opt/conda/etc/profile.d/conda.sh; conda activate base && \
-    mamba env update --file /tmp/environment.yml && \
+RUN mamba env update -n base --file /tmp/environment.yml && \
     mamba clean -afy
 
 USER root
@@ -64,9 +63,6 @@ COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
-
-# activate base by default in bashrc
-# RUN sed 's/conda activate base/conda activate base/' /home/$NB_USER/.bashrc > /etc/profile.d/bashrc
 
 WORKDIR /home/$NB_USER 
 USER $NB_USER
