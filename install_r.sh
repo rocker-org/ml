@@ -49,6 +49,9 @@ chgrp -R users /usr/lib/R/site-library
 chmod -R g+ws /usr/local/lib/R/site-library
 chmod -R g+ws /usr/lib/R/site-library
 
+# Cleanup
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 ln -s /usr/lib/R/site-library/littler/examples/installRub.r /usr/local/bin/installRub.r
 
