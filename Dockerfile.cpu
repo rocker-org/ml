@@ -28,14 +28,18 @@ RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
 
 # Fix permissions on /opt/conda directories so user can write to them
 # We only change directories to avoid copying all file data (doubling image size)
+# conda-meta files must be writable for mamba (only 1.4MB)
 RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
-    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} +
+    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} + && \
+    chgrp -R conda /opt/conda/conda-meta && \
+    chmod -R g+rw /opt/conda/conda-meta
 
 USER ${NB_USER}
 # Install additional conda packages into base environment (CPU-only version)
 COPY --chown=${NB_USER}:conda environment.cpu.yml /tmp/environment.yml
 COPY clean_conda.sh /tmp/clean_conda.sh
 RUN mamba env update -n base --file /tmp/environment.yml && \
+    pip install --no-cache-dir jupyter-tensorboard-proxy jupyter-keepalive && \
     bash /tmp/clean_conda.sh
 
 USER root

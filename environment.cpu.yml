@@ -18,6 +18,3 @@ dependencies:
   - polars
   - pypdf
   - pytorch-cpu
-  - pip:
-    - jupyter-tensorboard-proxy
-    - jupyter-keepalive
