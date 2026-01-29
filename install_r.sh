@@ -63,6 +63,4 @@ ln -s /usr/lib/R/site-library/littler/examples/installRub.r /usr/local/bin/insta
 wget https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile
 mv Rprofile ${R_HOME}/etc/Rprofile.site
 
-
-
-rm -rf /var/lib/apt/lists/*
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

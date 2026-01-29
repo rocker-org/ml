@@ -27,8 +27,6 @@ RUN usermod -l ${NB_USER} ubuntu && \
 RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
 
 # Fix permissions on /opt/conda directories so user can write to them
-
-# Fix permissions on /opt/conda directories so user can write to them
 # We only change directories to avoid copying all file data (doubling image size)
 RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
     find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} +
@@ -49,21 +47,18 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh && \
     rm -rf .cache /tmp/* /var/tmp/* 
 
 # apt utilities, code-server setup
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash
 
 ## Grant user sudoer privileges
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
 # Install R
 COPY install_r.sh install_r.sh
-RUN bash install_r.sh && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN bash install_r.sh
 
 # RStudio
 COPY install_rstudio.sh install_rstudio.sh
-RUN bash install_rstudio.sh && \
-    rm -rf /tmp/* /var/tmp/*
+RUN bash install_rstudio.sh
 
 COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
@@ -73,7 +68,7 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 WORKDIR /home/$NB_USER 
 USER $NB_USER
 
-COPY vscode-extensions.txt /tmp/vscode-extensions.txt
+COPY --chown=${NB_USER}:${NB_USER} vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt && \
     rm -rf /tmp/*
 
