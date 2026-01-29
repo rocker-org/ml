@@ -38,9 +38,13 @@ RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
 USER ${NB_USER}
 # Install additional conda packages into base environment
 COPY --chown=${NB_USER}:conda environment.yml /tmp/environment.yml
-COPY clean_conda.sh clean_conda.sh
 RUN mamba env update -n base --file /tmp/environment.yml && \
-    bash clean_conda.sh
+    mamba clean -afy && \
+    find /opt/conda -type f -name '*.pyc' -delete && \
+    find /opt/conda -type f -name '*.pyo' -delete && \
+    find /opt/conda -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/conda/lib -name '*.a' -delete 2>/dev/null || true && \
+    rm -rf /tmp/*
 
 USER root
 RUN apt-get update && apt-get -y install curl && \
