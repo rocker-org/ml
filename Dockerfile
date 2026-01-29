@@ -73,12 +73,12 @@ RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-ext
     rm -rf /tmp/*
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
-COPY install.r /tmp/install.r
+COPY --chown=${NB_USER}:${NB_USER} install.r /tmp/install.r
 RUN Rscript /tmp/install.r && \
     rm -rf /tmp/* /var/tmp/*
 
 ## additions for this image
-COPY install_spatial.r /tmp/install.r
+COPY --chown=${NB_USER}:${NB_USER} install_spatial.r /tmp/install.r
 RUN Rscript /tmp/install.r && \
     rm -rf /tmp/* /var/tmp/* 
 
