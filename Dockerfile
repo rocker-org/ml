@@ -31,13 +31,11 @@ RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
 # Fix permissions on /opt/conda directories so user can write to them
 # We only change directories to avoid copying all file data (doubling image size)
 RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
-    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} + && \
-    chgrp -R conda /opt/conda/conda-meta && \
-    chmod -R g+rw /opt/conda/conda-meta
+    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} +
 
 USER ${NB_USER}
 # Install additional conda packages into base environment
-COPY --chown=${NB_USER}:conda environment.yml /tmp/environment.yml
+COPY environment.yml /tmp/environment.yml
 RUN mamba env update -n base --file /tmp/environment.yml && \
     mamba clean -afy && \
     find /opt/conda -type f -name '*.pyc' -delete && \
@@ -63,11 +61,13 @@ RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoer
 
 # Install R
 COPY install_r.sh install_r.sh
-RUN bash install_r.sh
+RUN bash install_r.sh && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # RStudio
 COPY install_rstudio.sh install_rstudio.sh
-RUN bash install_rstudio.sh
+RUN bash install_rstudio.sh && \
+    rm -rf /tmp/* /var/tmp/*
 
 COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
@@ -77,17 +77,17 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 WORKDIR /home/$NB_USER 
 USER $NB_USER
 
-COPY --chown=${NB_USER}:${NB_USER} vscode-extensions.txt /tmp/vscode-extensions.txt
+COPY vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt && \
     rm -rf /tmp/*
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
-COPY --chown=${NB_USER}:${NB_USER} install.r /tmp/install.r
+COPY install.r /tmp/install.r
 RUN Rscript /tmp/install.r && \
     rm -rf /tmp/* /var/tmp/*
 
 ## additions for this image
-COPY --chown=${NB_USER}:${NB_USER} install_spatial.r /tmp/install.r
+COPY install_spatial.r /tmp/install.r
 RUN Rscript /tmp/install.r && \
     rm -rf /tmp/* /var/tmp/* 
 
