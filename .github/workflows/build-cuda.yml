@@ -6,7 +6,6 @@ on:
     - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
   push:
     paths:
-      - Dockerfile.cuda
       - Dockerfile
       - install*.sh
       - Rprofile

@@ -4,17 +4,10 @@ This repository contains images for machine learning and GPU-based computation i
 
 ## Pre-Built Images
 
-Four image variants are available, split between GPU and CPU architectures:
+At this time there are two prebuilt images available, both using the `latest` tag.
 
-### GPU Images (CUDA-enabled)
-
-- `rocker/cuda` - Full ML/data science environment with NVIDIA GPU support. Based on `rapidsai/ci-conda:latest` (Ubuntu 24.04 with CUDA libraries).
-- `rocker/cuda-spatial` - GPU image with additional geospatial packages (GDAL, sf, terra, stars).
-
-### CPU Images (smaller, no GPU)
-
-- `rocker/ml` - CPU-only ML/data science environment. Based on `condaforge/miniforge3:latest` (Ubuntu 24.04). **32.7% smaller** than GPU variant.
-- `rocker/ml-spatial` - CPU image with geospatial packages. **40.8% smaller** than GPU spatial variant.
+- `rocker/cuda` - CUDA drivers for NVIDIA GPUs. Based on `quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04`.  A good general-purpose image supporting NVIDIA GPUs.
+- `rocker/ml` - Identical image recipe but using `quay.io/jupyter/minimal-notebook:ubuntu-24.04`.  A smaller image when CUDA drivers are not required.
 
 To access a stable build, users may refer to specific `sha` hash of either image on the Rocker [GitHub Container Registry](https://github.com/orgs/rocker-org/packages).  Note that hashes are 'frozen' images, and will not have most recent versions of software, possibly including critical security patches.
 
@@ -47,18 +40,8 @@ These images are also compatible with Jupyterlab in GitHub Codespaces.
 
 These images can be deployed in the usual manner directly with Docker:
 
-```bash
-# CPU base image
+```
 docker run -ti -p 8888:8888 rocker/ml
-
-# GPU base image (requires NVIDIA GPU and drivers)
-docker run --gpus all -p 8888:8888 rocker/cuda
-
-# CPU with geospatial packages
-docker run -ti -p 8888:8888 rocker/ml-spatial
-
-# GPU with geospatial packages
-docker run --gpus all -p 8888:8888 rocker/cuda-spatial
 ```
 
 ## Customizing images
@@ -82,12 +65,14 @@ While repositories such as Posit's package manager or R-Universe now provide pre
 
 On the python side, package dependencies are managed by conda, which bundles its own copies of any required system libraries. conda installations do not require root, meaning that users can easily install additional packages at build time or in an interactive session. 
 
-### Base Images and CUDA
+### CUDA versions
 
-**GPU Images** are based on [`rapidsai/ci-conda:latest`](https://hub.docker.com/r/rapidsai/ci-conda), which provides Ubuntu 24.04 with CUDA 12 libraries and conda/mamba package management. This image is maintained by the RAPIDS AI team and includes optimized CUDA-enabled packages like cuDF and cuML.
+This approach inherits CUDA libraries from [upstream images of the Jupyter Docker stack](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#cuda-enabled-variants).  At this time, Jupyter builds `pytorch` images for the last two CUDA variants (12 & 11) and the `tensorflow` images only for the latest version of CUDA (12). CUDA is only supported for x86_64 architectures, though non-cuda versions support aarch64 (amd64).    
 
-**CPU Images** are based on [`condaforge/miniforge3:latest`](https://hub.docker.com/r/condaforge/miniforge3), providing Ubuntu 24.04 with conda/mamba but without CUDA libraries. This results in significantly smaller images (8.68 GB vs 12.9 GB for base, 9.06 GB vs 15.3 GB for spatial).
-
-CUDA is only supported for x86_64 architectures. CPU images support both amd64 and arm64.
+ CUDA Version | image
+ -------------|----------------------------------------------------------------------------------------------------
+ 12 | [`quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook) 
+ 12 | [`quay.io/jupyter/tensorflow-notebook:cuda12-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook) 
+ 11 | [`quay.io/jupyter/pytorch-notebook:cuda11-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook)
 
 

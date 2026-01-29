@@ -31,18 +31,16 @@ RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
 # Fix permissions on /opt/conda directories so user can write to them
 # We only change directories to avoid copying all file data (doubling image size)
 RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
-    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} +
+    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} + && \
+    chgrp -R conda /opt/conda/conda-meta && \
+    chmod -R g+rw /opt/conda/conda-meta
 
 USER ${NB_USER}
 # Install additional conda packages into base environment
-COPY environment.yml /tmp/environment.yml
+COPY --chown=${NB_USER}:conda environment.yml /tmp/environment.yml
+COPY clean_conda.sh clean_conda.sh
 RUN mamba env update -n base --file /tmp/environment.yml && \
-    mamba clean -afy && \
-    find /opt/conda -type f -name '*.pyc' -delete && \
-    find /opt/conda -type f -name '*.pyo' -delete && \
-    find /opt/conda -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
-    find /opt/conda/lib -name '*.a' -delete 2>/dev/null || true && \
-    rm -rf /tmp/*
+    bash clean_conda.sh
 
 USER root
 RUN apt-get update && apt-get -y install curl && \
@@ -61,13 +59,11 @@ RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoer
 
 # Install R
 COPY install_r.sh install_r.sh
-RUN bash install_r.sh && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN bash install_r.sh
 
 # RStudio
 COPY install_rstudio.sh install_rstudio.sh
-RUN bash install_rstudio.sh && \
-    rm -rf /tmp/* /var/tmp/*
+RUN bash install_rstudio.sh
 
 COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
@@ -77,17 +73,17 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 WORKDIR /home/$NB_USER 
 USER $NB_USER
 
-COPY vscode-extensions.txt /tmp/vscode-extensions.txt
+COPY --chown=${NB_USER}:${NB_USER} vscode-extensions.txt /tmp/vscode-extensions.txt
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt && \
     rm -rf /tmp/*
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
-COPY install.r /tmp/install.r
+COPY --chown=${NB_USER}:${NB_USER} install.r /tmp/install.r
 RUN Rscript /tmp/install.r && \
     rm -rf /tmp/* /var/tmp/*
 
 ## additions for this image
-COPY install_spatial.r /tmp/install.r
+COPY --chown=${NB_USER}:${NB_USER} install_spatial.r /tmp/install.r
 RUN Rscript /tmp/install.r && \
     rm -rf /tmp/* /var/tmp/* 
 

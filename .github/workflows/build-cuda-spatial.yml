@@ -5,12 +5,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'extend/Dockerfile.cuda'
       - 'extend/Dockerfile'
       - 'extend/environment.yml'
   pull_request:
     paths:
-      - 'extend/Dockerfile.cuda'
       - 'extend/Dockerfile'
       - 'extend/environment.yml'
   workflow_run:

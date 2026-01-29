@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # determine Ubuntu release
 source /etc/os-release
