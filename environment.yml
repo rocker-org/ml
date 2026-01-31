@@ -1,5 +1,8 @@
 name: base 
 channels:
+  - pytorch
+  - nvidia
+  - rapidsai
   - conda-forge
 dependencies:
   - altair
@@ -17,7 +20,7 @@ dependencies:
   - plotnine
   - polars
   - pypdf
-  - pytorch
+  - pytorch-cuda
   - cudf
   - pip:
     - jupyter-tensorboard-proxy
