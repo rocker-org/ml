@@ -1,0 +1,33 @@
+# Additional packages for CPU-only image (base packages already installed)
+# Note: Most packages are already in the base image's requirements-cpu.txt
+# These are geospatial extensions that might be added separately
+
+# Geospatial packages
+cartopy
+earthaccess
+exactextract
+fiona
+geoarrow-types
+geopandas
+geocube
+h5netcdf
+leafmap
+localtileserver
+mapclassify
+maplibre
+netCDF4
+odc-geo
+odc-stac
+planetary-computer
+pmtiles
+pyogrio
+pystac
+pystac-client
+rasterio
+rasterstats
+rio-cogeo
+rioxarray
+stackstac
+xarray
+zarr
+pcodec

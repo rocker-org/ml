@@ -6,11 +6,11 @@ on:
     branches: [main]
     paths:
       - 'extend/Dockerfile.cpu'
-      - 'extend/environment.yml'
+      - 'extend/requirements-cpu.txt'
   pull_request:
     paths:
       - 'extend/Dockerfile.cpu'
-      - 'extend/environment.yml'
+      - 'extend/requirements-cpu.txt'
   workflow_run:
     workflows: ["Build ML (CPU) Base"]
     types:

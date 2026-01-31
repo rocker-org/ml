@@ -1,5 +1,5 @@
-# Use CUDA 13 devel image (required for NVRTC/Numba per RAPIDS docs)
-FROM nvidia/cuda:13.0.0-devel-ubuntu24.04
+# Use CUDA 13 runtime image (includes NVRTC for Numba, lighter than devel)
+FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04
 
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
@@ -19,6 +19,11 @@ ENV HOME="/home/${NB_USER}"
 # Set up system-wide Python virtual environment
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Ensure R uses the venv
+ENV RETICULATE_PYTHON="$VIRTUAL_ENV/bin/python"
+# Set LD_LIBRARY_PATH to include ONLY driver libraries, excluding the conflicting CUDA toolkit
+ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
 
 USER root
 

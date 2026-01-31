@@ -1,13 +1,8 @@
 # RAPIDS packages with CUDA 13 support (25.12 stable release)
+# cudf includes built-in Polars interoperability (df.to_polars() / cudf.from_polars())
 --extra-index-url=https://pypi.nvidia.com
 cudf-cu13==25.12.*
-cuml-cu13==25.12.*
-cugraph-cu13==25.12.*
-cuxfilter-cu13==25.12.*
-cucim-cu13==25.12.*
-raft-dask-cu13==25.12.*
-cuvs-cu13==25.12.*
-nx-cugraph-cu13==25.12.*
+
 
 # PyTorch with CUDA 13 (from PyTorch index)
 --extra-index-url=https://download.pytorch.org/whl/cu130

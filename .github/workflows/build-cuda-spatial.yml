@@ -6,11 +6,11 @@ on:
     branches: [main]
     paths:
       - 'extend/Dockerfile'
-      - 'extend/environment.yml'
+      - 'extend/requirements.txt'
   pull_request:
     paths:
       - 'extend/Dockerfile'
-      - 'extend/environment.yml'
+      - 'extend/requirements.txt'
   workflow_run:
     workflows: ["Build CUDA (GPU) Base"]
     types:

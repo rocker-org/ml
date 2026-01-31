@@ -1,5 +1,0 @@
-# This file is deprecated - using pip-based installation with requirements.txt
-# The new setup uses nvidia/cuda:13.0-devel-ubuntu24.04 base with /opt/venv
-# For package list, see requirements.txt
-
-

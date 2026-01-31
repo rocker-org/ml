@@ -7,10 +7,9 @@ RUN Rscript install.r && \
     rm -rf /tmp/* /var/tmp/*
 
 ## Python extensions
-COPY environment.yml environment.yml
-COPY clean_conda.sh /tmp/clean_conda.sh
-RUN mamba env update -n base --file environment.yml && \
-    bash /tmp/clean_conda.sh
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    rm requirements.txt
 
 # GDAL
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
