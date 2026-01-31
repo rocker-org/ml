@@ -1,28 +1,5 @@
-name: base 
-channels:
-  - pytorch
-  - nvidia
-  - rapidsai
-  - conda-forge
-dependencies:
-  - altair
-  - duckdb-engine
-  - gh-scoped-creds
-  - glances
-  - git-filter-repo
-  - ibis-duckdb
-  - jupyter-resource-usage
-  - jupyter-rsession-proxy
-  - jupyter-vscode-proxy
-  - jupyterhub-singleuser
-  - jupyterlab-git
-  - pip
-  - plotnine
-  - polars
-  - pypdf
-  - pytorch-cuda
-  - cudf
-  - pip:
-    - jupyter-tensorboard-proxy
-    - jupyter-keepalive
+# This file is deprecated - using pip-based installation with requirements.txt
+# The new setup uses nvidia/cuda:13.0-devel-ubuntu24.04 base with /opt/venv
+# For package list, see requirements.txt
+
 

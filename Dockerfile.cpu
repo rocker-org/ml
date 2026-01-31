@@ -1,5 +1,5 @@
-ARG BASE=condaforge/miniforge3
-FROM ${BASE}
+# CPU-only pip-based image
+FROM ubuntu:24.04
 
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
@@ -16,34 +16,38 @@ ENV NB_UID=1000
 ENV USER="${NB_USER}"
 ENV HOME="/home/${NB_USER}"
 
+# Set up system-wide Python virtual environment
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 USER root
 
-# miniforge3 base uses ubuntu user (like rapidsai), change to jovyan
-RUN usermod -l ${NB_USER} ubuntu && \
-    usermod -d /home/${NB_USER} -m ${NB_USER}
+# Ubuntu 24.04 base has ubuntu user/group at UID/GID 1000, rename to jovyan
+RUN groupmod -n ${NB_USER} ubuntu && \
+    usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu
 
-# Create conda group if it doesn't exist, and add user to it
-RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
+# Install Python 3.12 (default in Ubuntu 24.04) and system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-venv \
+    python3-pip \
+    git \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Fix permissions on /opt/conda directories so user can write to them
-# We only change directories to avoid copying all file data (doubling image size)
-# conda-meta files must be writable for mamba (only 1.4MB)
-RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
-    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} + && \
-    chgrp -R conda /opt/conda/conda-meta && \
-    chmod -R g+rw /opt/conda/conda-meta
+# Create venv and upgrade pip
+RUN python3 -m venv $VIRTUAL_ENV && \
+    chgrp -R $NB_USER $VIRTUAL_ENV && \
+    chmod -R g+rwx $VIRTUAL_ENV && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel
 
 USER ${NB_USER}
-# Install additional conda packages into base environment (CPU-only version)
-COPY --chown=${NB_USER}:conda environment.cpu.yml /tmp/environment.yml
-COPY clean_conda.sh /tmp/clean_conda.sh
-RUN mamba env update -n base --file /tmp/environment.yml && \
-    pip install --no-cache-dir jupyter-tensorboard-proxy jupyter-keepalive && \
-    bash /tmp/clean_conda.sh
+# Install Python packages from requirements (CPU-only)
+COPY requirements-cpu.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 USER root
-RUN apt-get update && apt-get -y install curl
 
 # install vscode
 RUN curl -fsSL https://code-server.dev/install.sh | sh

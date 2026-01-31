@@ -10,7 +10,7 @@ on:
       - install*.sh
       - Rprofile
       - vscode-extensions.txt
-      - environment.yml
+      - requirements.txt
       - .github/workflows/build-cuda.yml
 
 jobs:
@@ -53,7 +53,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/rocker-org/cuda:latest
+            ghcr.io/rocker-org/cuda:cuda13.0-py3.12-rapids25.12
+            ghcr.io/rocker-org/cuda:cuda13.0-py3.12
+            ghcr.io/rocker-org/cuda:cuda13.0
             rocker/cuda:latest
+            rocker/cuda:cuda13.0-py3.12-rapids25.12
+            rocker/cuda:cuda13.0-py3.12
+            rocker/cuda:cuda13.0
           build-args: |
-            BASE=rapidsai/ci-conda:latest
-            NB_USER=ubuntu
+            NB_USER=jovyan

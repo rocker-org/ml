@@ -1,0 +1,31 @@
+# CPU-only packages (no CUDA dependencies)
+
+# PyTorch CPU version
+--extra-index-url=https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio
+
+# JupyterLab and extensions
+jupyterlab
+jupyterlab-git
+jupyter-resource-usage
+jupyter-rsession-proxy
+jupyter-vscode-proxy
+jupyterhub
+jupyter-tensorboard-proxy
+jupyter-keepalive
+
+# Data analysis packages
+altair
+duckdb
+duckdb-engine
+ibis-framework[duckdb]
+polars
+plotnine
+pypdf
+
+# Development and utilities
+gh-scoped-creds
+glances
+git-filter-repo

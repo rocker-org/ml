@@ -1,0 +1,40 @@
+# RAPIDS packages with CUDA 13 support (25.12 stable release)
+--extra-index-url=https://pypi.nvidia.com
+cudf-cu13==25.12.*
+cuml-cu13==25.12.*
+cugraph-cu13==25.12.*
+cuxfilter-cu13==25.12.*
+cucim-cu13==25.12.*
+raft-dask-cu13==25.12.*
+cuvs-cu13==25.12.*
+nx-cugraph-cu13==25.12.*
+
+# PyTorch with CUDA 13 (from PyTorch index)
+--extra-index-url=https://download.pytorch.org/whl/cu130
+torch
+torchvision
+torchaudio
+
+# JupyterLab and extensions
+jupyterlab
+jupyterlab-git
+jupyter-resource-usage
+jupyter-rsession-proxy
+jupyter-vscode-proxy
+jupyterhub
+jupyter-tensorboard-proxy
+jupyter-keepalive
+
+# Data analysis packages
+altair
+duckdb
+duckdb-engine
+ibis-framework[duckdb]
+polars
+plotnine
+pypdf
+
+# Development and utilities
+gh-scoped-creds
+glances
+git-filter-repo

@@ -6,7 +6,7 @@ This repository contains images for machine learning and GPU-based computation i
 
 At this time there are two prebuilt images available, both using the `latest` tag.
 
-- `rocker/cuda` - CUDA drivers for NVIDIA GPUs. Based on `quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04`.  A good general-purpose image supporting NVIDIA GPUs.
+- `rocker/cuda` - CUDA 13 drivers for NVIDIA GPUs. Based on `nvidia/cuda:13.0.0-devel-ubuntu24.04` with pip-based Python environment. Includes RAPIDS AI packages with CUDA 13 support.
 - `rocker/ml` - Identical image recipe but using `quay.io/jupyter/minimal-notebook:ubuntu-24.04`.  A smaller image when CUDA drivers are not required.
 
 To access a stable build, users may refer to specific `sha` hash of either image on the Rocker [GitHub Container Registry](https://github.com/orgs/rocker-org/packages).  Note that hashes are 'frozen' images, and will not have most recent versions of software, possibly including critical security patches.
@@ -17,8 +17,11 @@ To access a stable build, users may refer to specific `sha` hash of either image
 - RStudio Server IDE
 - VSCode (code-server) IDE and common extensions
 - Tensorboard plugin
-- Conda-friendly python installs
+- **Pip-based Python environment** (system-wide at `/opt/venv`) for CUDA 13 support
 - Binary-friendly R package installs (BSPM/R-universe)
+- RAPIDS AI libraries with CUDA 13 support (cuDF, cuML, cuGraph, etc.)
+- PyTorch with CUDA 13 support
+- Python 3.12
 
 See technical details below.
 

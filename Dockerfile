@@ -1,5 +1,5 @@
-ARG BASE=rapidsai/ci-conda
-FROM ${BASE}
+# Use CUDA 13 devel image (required for NVRTC/Numba per RAPIDS docs)
+FROM nvidia/cuda:13.0.0-devel-ubuntu24.04
 
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
@@ -16,31 +16,38 @@ ENV NB_UID=1000
 ENV USER="${NB_USER}"
 ENV HOME="/home/${NB_USER}"
 
+# Set up system-wide Python virtual environment
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 USER root
 
-# change ubuntu to jovyan (consistent with Jupyter stacks for home dir mapping)
-RUN usermod -l ${NB_USER} ubuntu && \
-    usermod -d /home/${NB_USER} -m ${NB_USER}
+# nvidia/cuda base has ubuntu user/group at UID/GID 1000, rename to jovyan
+RUN groupmod -n ${NB_USER} ubuntu && \
+    usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu
 
-# Create conda group if it doesn't exist, and add user to it
-RUN getent group conda || groupadd conda && usermod -aG conda $NB_USER
+# Install Python 3.12 (default in Ubuntu 24.04) and system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-venv \
+    python3-pip \
+    git \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Fix permissions on /opt/conda directories so user can write to them
-# We only change directories to avoid copying all file data (doubling image size)
-RUN find /opt/conda -type d ! -group conda -exec chgrp conda {} + && \
-    find /opt/conda -type d ! -perm -g+w -exec chmod g+rwx {} +
+# Create venv and upgrade pip
+RUN python3 -m venv $VIRTUAL_ENV && \
+    chgrp -R $NB_USER $VIRTUAL_ENV && \
+    chmod -R g+rwx $VIRTUAL_ENV && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel
 
 USER ${NB_USER}
-# Install additional conda packages into base environment
-COPY environment.yml /tmp/environment.yml
-COPY clean_conda.sh /tmp/clean_conda.sh
-RUN mamba env update -n base --file /tmp/environment.yml && \
-    bash /tmp/clean_conda.sh
+# Install Python packages from requirements
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 USER root
-RUN apt-get update && apt-get -y install curl && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # install vscode
 RUN curl -fsSL https://code-server.dev/install.sh | sh && \
@@ -53,14 +60,12 @@ RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/in
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
 # Install R
-COPY install_r.sh install_r.sh
-RUN bash install_r.sh
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile -o /usr/lib/R/etc/Rprofile.site
 
 # RStudio
-COPY install_rstudio.sh install_rstudio.sh
-RUN bash install_rstudio.sh
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_rstudio.sh | bash
 
-COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin

@@ -10,7 +10,7 @@ on:
       - install*.sh
       - Rprofile
       - vscode-extensions.txt
-      - environment.cpu.yml
+      - requirements-cpu.txt
       - .github/workflows/build-ml.yml
 
 jobs:
@@ -53,9 +53,10 @@ jobs:
           push: true
           tags: |
             ghcr.io/rocker-org/ml:latest
-            rocker/ml:latest
             ghcr.io/rocker-org/ml:cpu
+            ghcr.io/rocker-org/ml:py3.12-cpu
+            rocker/ml:latest
             rocker/ml:cpu
+            rocker/ml:py3.12-cpu
           build-args: |
-            BASE=condaforge/miniforge3:latest
             NB_USER=jovyan
