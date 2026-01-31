@@ -6,11 +6,11 @@ on:
     - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
   push:
     paths:
-      - Dockerfile
+      - Dockerfile.cuda
       - install*.sh
       - Rprofile
       - vscode-extensions.txt
-      - requirements.txt
+      - requirements.cuda.txt
       - .github/workflows/build-cuda.yml
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: Dockerfile
+          file: Dockerfile.cuda
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |

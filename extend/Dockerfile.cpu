@@ -1,4 +1,4 @@
-ARG BASE=rocker/ml:cpu
+ARG BASE=rocker/ml
 FROM $BASE 
 
 # When run at build time, R automagically handles any necessary apt-gets

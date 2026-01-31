@@ -58,7 +58,5 @@ jobs:
           tags: |
             ghcr.io/rocker-org/ml-spatial:latest
             rocker/ml-spatial:latest
-            ghcr.io/rocker-org/ml-spatial:cpu
-            rocker/ml-spatial:cpu
           build-args: |
-            BASE=rocker/ml:cpu
+            BASE=rocker/ml

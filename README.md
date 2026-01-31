@@ -4,10 +4,14 @@ This repository contains images for machine learning and GPU-based computation i
 
 ## Pre-Built Images
 
-At this time there are two prebuilt images available, both using the `latest` tag.
+At this time there are two prebuilt images available:
 
-- `rocker/cuda` - CUDA 13 drivers for NVIDIA GPUs. Based on `nvidia/cuda:13.0.0-devel-ubuntu24.04` with pip-based Python environment. Includes RAPIDS AI packages with CUDA 13 support.
-- `rocker/ml` - Identical image recipe but using `quay.io/jupyter/minimal-notebook:ubuntu-24.04`.  A smaller image when CUDA drivers are not required.
+- **`rocker/cuda`** - GPU image with CUDA 13 and RAPIDS AI. Based on `nvidia/cuda:13.0.0-runtime-ubuntu24.04` with pip-based Python environment. Includes RAPIDS AI packages with CUDA 13 support (cuDF, PyTorch, etc.).
+- **`rocker/ml`** - CPU-only image using `ubuntu:24.04` base. A smaller image when CUDA drivers are not required. Same Python packages but CPU versions only.
+
+Extended images with geospatial packages:
+- **`rocker/cuda-spatial`** - Extends `rocker/cuda` with geospatial packages (GDAL, GeoPandas, Rasterio, etc.)
+- **`rocker/ml-spatial`** - Extends `rocker/ml` with geospatial packages
 
 To access a stable build, users may refer to specific `sha` hash of either image on the Rocker [GitHub Container Registry](https://github.com/orgs/rocker-org/packages).  Note that hashes are 'frozen' images, and will not have most recent versions of software, possibly including critical security patches.
 

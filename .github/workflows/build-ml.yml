@@ -53,10 +53,8 @@ jobs:
           push: true
           tags: |
             ghcr.io/rocker-org/ml:latest
-            ghcr.io/rocker-org/ml:cpu
-            ghcr.io/rocker-org/ml:py3.12-cpu
+            ghcr.io/rocker-org/ml:py3.12
             rocker/ml:latest
-            rocker/ml:cpu
-            rocker/ml:py3.12-cpu
+            rocker/ml:py3.12
           build-args: |
             NB_USER=jovyan

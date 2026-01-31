@@ -5,12 +5,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'extend/Dockerfile'
-      - 'extend/requirements.txt'
+      - 'extend/Dockerfile.cuda'
+      - 'extend/requirements.cuda.txt'
   pull_request:
     paths:
-      - 'extend/Dockerfile'
-      - 'extend/requirements.txt'
+      - 'extend/Dockerfile.cuda'
+      - 'extend/requirements.cuda.txt'
   workflow_run:
     workflows: ["Build CUDA (GPU) Base"]
     types:
@@ -52,7 +52,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: extend
-          file: extend/Dockerfile
+          file: extend/Dockerfile.cuda
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
