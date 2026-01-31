@@ -4,28 +4,34 @@ This repository contains images for machine learning and GPU-based computation i
 
 ## Pre-Built Images
 
-At this time there are two prebuilt images available:
+### Base Images
 
-- **`rocker/cuda`** - GPU image with CUDA 13 and RAPIDS AI. Based on `nvidia/cuda:13.0.0-runtime-ubuntu24.04` with pip-based Python environment. Includes RAPIDS AI packages with CUDA 13 support (cuDF, PyTorch, etc.).
-- **`rocker/ml`** - CPU-only image using `ubuntu:24.04` base. A smaller image when CUDA drivers are not required. Same Python packages but CPU versions only.
+- **`rocker/cuda`** - GPU image with CUDA 13 and RAPIDS AI. Based on `nvidia/cuda:13.0.0-runtime-ubuntu24.04` with pip-based Python environment. Includes RAPIDS cuDF and PyTorch with CUDA 13 support.
+  - Tags: `latest`, `cuda13.0-py3.12-rapids25.12`, `cuda13.0-py3.12`, `cuda13.0`
+  
+- **`rocker/ml`** - CPU-only image using `ubuntu:24.04` base. Same Python stack but CPU versions only (no CUDA/RAPIDS).
+  - Tags: `latest`, `py3.12`
 
-Extended images with geospatial packages:
-- **`rocker/cuda-spatial`** - Extends `rocker/cuda` with geospatial packages (GDAL, GeoPandas, Rasterio, etc.)
-- **`rocker/ml-spatial`** - Extends `rocker/ml` with geospatial packages
+### Extended Images with Geospatial Packages
 
-To access a stable build, users may refer to specific `sha` hash of either image on the Rocker [GitHub Container Registry](https://github.com/orgs/rocker-org/packages).  Note that hashes are 'frozen' images, and will not have most recent versions of software, possibly including critical security patches.
+- **`rocker/cuda-spatial`** - Extends `rocker/cuda` with geospatial packages (GDAL, GeoPandas, Rasterio, Xarray, etc.)
+  - Tags: `latest`
+  
+- **`rocker/ml-spatial`** - Extends `rocker/ml` with geospatial packages (GDAL, GeoPandas, Rasterio, Xarray, etc.)
+  - Tags: `latest`
+
+To access a stable build, users may refer to specific SHA hash tags on the [GitHub Container Registry](https://github.com/orgs/rocker-org/packages). Note that SHA-tagged images are 'frozen' and will not have the most recent versions of software, possibly including critical security patches.
 
 ## Features
 
-- Jupyter Lab IDE
-- RStudio Server IDE
-- VSCode (code-server) IDE and common extensions
-- Tensorboard plugin
-- **Pip-based Python environment** (system-wide at `/opt/venv`) for CUDA 13 support
-- Binary-friendly R package installs (BSPM/R-universe)
-- RAPIDS AI libraries with CUDA 13 support (cuDF, cuML, cuGraph, etc.)
-- PyTorch with CUDA 13 support
-- Python 3.12
+- **IDEs:** Jupyter Lab, RStudio Server, VSCode (code-server) with common extensions
+- **ML Plugins:** Tensorboard support
+- **Python:** 3.12 with pip-based environment at `/opt/venv` (user-writable)
+- **CUDA Support:** CUDA 13 runtime libraries (GPU image only)
+- **RAPIDS AI:** cuDF 25.12 with built-in Polars interoperability (GPU image only)
+- **PyTorch:** CUDA 13 wheels (GPU) or CPU wheels (CPU image)
+- **R Packages:** Binary-friendly installs via BSPM/R-universe
+- **Data Tools:** JupyterLab extensions, DuckDB, Polars, Ibis
 
 See technical details below.
 
@@ -59,27 +65,55 @@ An example is provided in the `extend` directory, showing a simple example of a 
 
 ## Technical details
 
-Several other popular configurations can be found with R and Python. Rather than provide a comprehensive stack, this project seeks to provide a robust base with sidesteps some of the issues and complexities of alternatives.
+Several other popular configurations exist for R and Python environments. Rather than provide a comprehensive stack, this project seeks to provide a robust base that sidesteps some of the issues and complexities of alternatives.
+
+### Python Environment
+
+This stack uses **pip-based Python** with a system-wide virtual environment at `/opt/venv` (included in `PATH`). The virtual environment is user-writable via group permissions, allowing users to install additional packages without sudo.
+
+For CUDA support, we use pip wheels from:
+- RAPIDS packages from `pypi.nvidia.com` (e.g., `cudf-cu13==25.12.*`)
+- PyTorch from `download.pytorch.org/whl/cu130`
+
+The GPU image is based on `nvidia/cuda:13.0.0-runtime-ubuntu24.04`, which provides CUDA runtime libraries and NVRTC (required for Numba JIT compilation in RAPIDS). The CPU image uses plain `ubuntu:24.04`.
+
+**Why pip instead of conda?** While conda is excellent for many use cases, pip wheels provide:
+- More straightforward CUDA 13 support for RAPIDS 25.12
+- Simpler dependency management for our specific package set
+- Smaller images for CPU-only deployments
 
 ### JupyterHub Compatibility
 
-This stack is designed with maximum compatibility with [JupyterHub](https://jupyter.org/hub) deployments. These docker images are simple and transparent extensions on top of [the official JupyterHub Docker Stacks](https://jupyter-docker-stacks.readthedocs.io/).  One notable aspect of JupyterHub compatibility is that most JupyterHub deployments assume the default user ($NB_USER)'s home directory will be bind-mounted.  This provides persistent user storage between restarts of a user's server (typically a kubernetes pod), but means that any software installed into the home directory on the image will be overwritten.  Therefore, this stack takes care to configure standard installation below the user's home directory.  As typical of rocker, R packages are installed in $R_HOME (`/usr/lib/R`), while conda install is inherited from JupyterHub (in `/opt/conda`).  Additional utilities and code-server extensions are put in `/opt/share` (specifically, `XDG_DATA_HOME` is set to `/opt/share`).  This allows pre-installation and avoids unnecessary bloat of users home directory, which can be important when many users access the same JupyterHub.  All JupyterHub images all use `conda` for python package installation, and conflicts in some extensions can arise in pip-installed versions (espicially in things such as jupyter-widgets).  
+This stack is designed with maximum compatibility with [JupyterHub](https://jupyter.org/hub) deployments. Key design decisions:
+
+- **User-writable environments:** Python packages can be installed by non-sudo users in `/opt/venv`
+- **No home directory pollution:** Software is installed outside `$HOME` since JupyterHub typically bind-mounts user home directories
+- **Standard conventions:** Uses `$NB_USER` (default: `jovyan`) and UID 1000 matching JupyterHub standards
+
+Additional utilities and VSCode extensions are installed in `/opt/share` (via `XDG_DATA_HOME`). This allows pre-installation and avoids unnecessary bloat of users' home directories, which is important when many users access the same JupyterHub.  
 
 
 ### Installing package binaries
 
-While repositories such as Posit's package manager or R-Universe now provide pre-compiled binaries for Linux Ubuntu LTS releases, many of these packages still require that certain runtime libaries are available on the system.  Typically, R users have been expected to `apt-get` these "system-level" dependencies (e.g. `libgdal`), creating an additional technical hurdle that is often unfamiliar to users.  This stack leverages the design of the [BSPM](https://github.com/rocker-org/bspm) system to automatically manage installation of system dependencies during the Docker build process. The example shown in `extend/` illustrates how we can simply list any required packages in `install.r` and enjoy system dependencies being resolved automatically.However, Jupyterhub deploys typically prevent users from root (`sudo`) privileges required to install system libraries, so this mechanism is not available at runtime to end users. This stack will still allow non-sudo users to install pre-built binary packages from R-Universe, provided any required system libraries are already present on the image. 
+**R packages:** Repositories such as Posit's Package Manager and R-Universe now provide pre-compiled binaries for Linux Ubuntu LTS releases. However, many packages still require runtime libraries (e.g., `libgdal`). This stack leverages [BSPM](https://github.com/rocker-org/bspm) to automatically manage installation of system dependencies during the Docker build process. The example in `extend/install.r` illustrates how you can simply list required R packages and have system dependencies resolved automatically.
 
-On the python side, package dependencies are managed by conda, which bundles its own copies of any required system libraries. conda installations do not require root, meaning that users can easily install additional packages at build time or in an interactive session. 
+Note: JupyterHub deployments typically prevent users from root (`sudo`) privileges, so this mechanism is not available at runtime to end users. However, users can still install pre-built binary packages from R-Universe if required system libraries are already present on the image.
 
-### CUDA versions
+**Python packages:** With our pip-based approach, users can install additional packages at build time or in an interactive session using `pip install`. The `/opt/venv` is user-writable (via group permissions), so no sudo is required. 
 
-This approach inherits CUDA libraries from [upstream images of the Jupyter Docker stack](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#cuda-enabled-variants).  At this time, Jupyter builds `pytorch` images for the last two CUDA variants (12 & 11) and the `tensorflow` images only for the latest version of CUDA (12). CUDA is only supported for x86_64 architectures, though non-cuda versions support aarch64 (amd64).    
+### CUDA and RAPIDS Support
 
- CUDA Version | image
- -------------|----------------------------------------------------------------------------------------------------
- 12 | [`quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook) 
- 12 | [`quay.io/jupyter/tensorflow-notebook:cuda12-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook) 
- 11 | [`quay.io/jupyter/pytorch-notebook:cuda11-ubuntu-24.04`](https://quay.io/repository/jupyter/pytorch-notebook)
+**CUDA 13.0:** The GPU image (`rocker/cuda`) uses NVIDIA's `cuda:13.0.0-runtime-ubuntu24.04` base image, which provides:
+- CUDA 13.0 runtime libraries
+- NVRTC (NVIDIA Runtime Compilation) for Numba JIT compilation
+- Required NVIDIA driver: 580.65.06 or newer
+
+**RAPIDS 25.12:** We install RAPIDS packages using pip wheels with the `-cu13` suffix:
+- `cudf-cu13==25.12.*` - GPU DataFrame library with built-in Polars interoperability
+- Includes necessary CUDA libraries bundled with the pip packages
+
+**PyTorch:** Installed from PyTorch's CUDA 13.0 wheel index for GPU image, CPU wheels for ML image.
+
+For more details on CUDA compatibility, see [NVIDIA's CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/).
 
 
