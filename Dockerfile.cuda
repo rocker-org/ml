@@ -48,8 +48,8 @@ RUN python3 -m venv $VIRTUAL_ENV && \
     pip install --no-cache-dir --upgrade pip setuptools wheel
 
 USER ${NB_USER}
-# Install Python packages from requirements
-COPY requirements.txt /tmp/requirements.txt
+# Install Python packages from requirements (CUDA-enabled)
+COPY requirements.cuda.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 USER root
