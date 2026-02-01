@@ -1,5 +1,39 @@
 ARG BASE=rocker/ml
+ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
+
+# Stage 1: Get GDAL binaries with Arrow/Parquet support from official image
+FROM ${GDAL_IMAGE} AS gdal-builder
+
+# Stage 2: Build our spatial image
 FROM $BASE 
+
+USER root
+
+# Copy GDAL libraries and binaries from the official GDAL image
+# This includes Arrow/Parquet support that Ubuntu's GDAL lacks
+COPY --from=gdal-builder /usr/local /usr/local
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgdal* /usr/lib/x86_64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libproj* /usr/lib/x86_64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libarrow* /usr/lib/x86_64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libparquet* /usr/lib/x86_64-linux-gnu/
+
+# Install runtime dependencies for GDAL
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libopenjp2-7 libcairo2 \
+    libpng16-16t64 libjpeg-turbo8 libgif7 liblzma5 \
+    libxml2 libexpat1 libxerces-c3.2 \
+    libnetcdf-c++4-1 libpoppler134 libspatialite8 \
+    libhdf4-0-alt libhdf5-103-1t64 libfreexl1 unixodbc libwebp7 \
+    liblcms2-2 libpcre3 libfyba0 \
+    libkmlbase1 libkmldom1 libkmlengine1 \
+    libmysqlclient21 libcfitsio10t64 libzstd1 libpq5 \
+    libarmadillo12 libopenexr-3-1-30 libheif1 libavif16 \
+    libdeflate0 libblosc1 liblz4-1 libbrotli1 \
+    && ldconfig \
+    && rm -rf /var/lib/apt/lists/*
+
+USER ${NB_USER}
 
 # When run at build time, R automagically handles any necessary apt-gets
 COPY install.r install.r
@@ -10,5 +44,7 @@ COPY requirements-cpu.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
-# GDAL
+# GDAL environment
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
+ENV GDAL_DATA=/usr/local/share/gdal
+ENV PROJ_DATA=/usr/local/share/proj

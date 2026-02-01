@@ -1,45 +1,58 @@
 # Geospatial and data science extensions for RAPIDS GPU image
+# Note: GDAL with Arrow/Parquet support is installed from system via multi-stage build
+
+# Cloud and storage
 boto3
-cartopy
-dask
-distributed
-earthaccess
-exactextract
-fiona
 fsspec
 gcsfs
-gdal
-geoarrow-types
+minio
+
+# Dask for distributed computing
+dask
+distributed
+
+# Geospatial data access
+earthaccess
+planetary-computer
+pystac
+pystac-client
+odc-stac
+stackstac
+
+# Geospatial processing (using system GDAL)
+fiona
 geopandas
 geocube
-h5netcdf
-icechunk
+pyogrio
+rasterio
+rasterstats
+rio-cogeo
+rioxarray
+odc-geo
+exactextract
+
+# Visualization
+cartopy
 jupytergis
 leafmap
-libgdal-arrow-parquet
 localtileserver
 mapclassify
 maplibre
-minio
-netCDF4
-odc-geo
-odc-stac
-planetary-computer
-pmtiles
-pyarrow
 pydeck
-pyogrio
-pystac
-pystac-client
-rasterio
-rasterstats
-requests
-rio-cogeo
-rioxarray
-stackstac
+pmtiles
 streamlit
-tippecanoe
-tqdm
+
+# Data formats
+geoarrow-types
+h5netcdf
+icechunk
+netCDF4
+pyarrow
 xarray
 zarr
 pcodec
+
+# Utilities
+requests
+tqdm
+tippecanoe

@@ -1,33 +1,58 @@
-# Additional packages for CPU-only image (base packages already installed)
-# Note: Most packages are already in the base image's requirements-cpu.txt
-# These are geospatial extensions that might be added separately
+# Geospatial and data science extensions for CPU image
+# Note: GDAL with Arrow/Parquet support is installed from system via multi-stage build
 
-# Geospatial packages
-cartopy
+# Cloud and storage
+boto3
+fsspec
+gcsfs
+minio
+
+# Dask for distributed computing
+dask
+distributed
+
+# Geospatial data access
 earthaccess
-exactextract
-fiona
-geoarrow-types
-geopandas
-geocube
-h5netcdf
-leafmap
-localtileserver
-mapclassify
-maplibre
-netCDF4
-odc-geo
-odc-stac
 planetary-computer
-pmtiles
-pyogrio
 pystac
 pystac-client
+odc-stac
+stackstac
+
+# Geospatial processing (using system GDAL)
+fiona
+geopandas
+geocube
+pyogrio
 rasterio
 rasterstats
 rio-cogeo
 rioxarray
-stackstac
+odc-geo
+exactextract
+
+# Visualization
+cartopy
+jupytergis
+leafmap
+localtileserver
+mapclassify
+maplibre
+pydeck
+pmtiles
+streamlit
+
+# Data formats
+geoarrow-types
+h5netcdf
+icechunk
+netCDF4
+pyarrow
 xarray
 zarr
 pcodec
+
+# Utilities
+requests
+tqdm
+tippecanoe
