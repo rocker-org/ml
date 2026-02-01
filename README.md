@@ -14,11 +14,18 @@ This repository contains images for machine learning and GPU-based computation i
 
 ### Extended Images with Geospatial Packages
 
-- **`rocker/cuda-spatial`** - Extends `rocker/cuda` with geospatial packages (GDAL, GeoPandas, Rasterio, Xarray, etc.)
+- **`rocker/cuda-spatial`** - Extends `rocker/cuda` with geospatial packages
   - Tags: `latest`
   
-- **`rocker/ml-spatial`** - Extends `rocker/ml` with geospatial packages (GDAL, GeoPandas, Rasterio, Xarray, etc.)
+- **`rocker/ml-spatial`** - Extends `rocker/ml` with geospatial packages
   - Tags: `latest`
+
+The spatial images include **GDAL 3.10 with Arrow/Parquet support** via multi-stage build from the official OSGeo GDAL image. This enables:
+- **GeoParquet** format support for efficient geospatial data storage
+- **Apache Arrow** integration for high-performance data exchange
+- Full suite of geospatial packages: GeoPandas, Rasterio, Xarray, PySTAC, etc.
+
+See [extend/README.md](extend/README.md) for details on the spatial image build.
 
 To access a stable build, users may refer to specific SHA hash tags on the [GitHub Container Registry](https://github.com/orgs/rocker-org/packages). Note that SHA-tagged images are 'frozen' and will not have the most recent versions of software, possibly including critical security patches.
 
