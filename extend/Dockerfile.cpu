@@ -17,6 +17,14 @@ COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libproj* /usr/lib/x86_64-linu
 COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libarrow* /usr/lib/x86_64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libparquet* /usr/lib/x86_64-linux-gnu/
+# Copy pkgconfig files for building Python packages
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/pkgconfig/gdal.pc /usr/lib/x86_64-linux-gnu/pkgconfig/
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/pkgconfig/proj.pc /usr/lib/x86_64-linux-gnu/pkgconfig/
+
+# Set up GDAL paths for building Python packages
+ENV PATH="/usr/local/bin:$PATH"
+ENV GDAL_CONFIG=/usr/local/bin/gdal-config
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 
 # Install runtime dependencies for GDAL
 RUN apt-get update && apt-get install -y --no-install-recommends \
