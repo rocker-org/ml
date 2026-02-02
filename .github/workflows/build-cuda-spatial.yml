@@ -7,10 +7,12 @@ on:
     paths:
       - 'extend/Dockerfile.cuda'
       - 'extend/requirements.cuda.txt'
+      - 'extend/install.r'
   pull_request:
     paths:
       - 'extend/Dockerfile.cuda'
       - 'extend/requirements.cuda.txt'
+      - 'extend/install.r'
   workflow_run:
     workflows: ["Build CUDA (GPU) Base"]
     types:

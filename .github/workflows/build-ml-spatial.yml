@@ -7,10 +7,12 @@ on:
     paths:
       - 'extend/Dockerfile.cpu'
       - 'extend/requirements-cpu.txt'
+      - 'extend/install.r'
   pull_request:
     paths:
       - 'extend/Dockerfile.cpu'
       - 'extend/requirements-cpu.txt'
+      - 'extend/install.r'
   workflow_run:
     workflows: ["Build ML (CPU) Base"]
     types:

@@ -3,6 +3,7 @@ ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
 
 # Stage 1: Get GDAL binaries with Arrow/Parquet support from official image
 FROM ${GDAL_IMAGE} AS gdal-builder
+RUN apt-get update && apt-get install -y libgeos-dev
 
 # Stage 2: Build our spatial image
 FROM $BASE 
@@ -13,6 +14,7 @@ USER root
 # This includes Arrow/Parquet support that Ubuntu's GDAL lacks
 COPY --from=gdal-builder /usr/local /usr/local
 COPY --from=gdal-builder /usr/bin/gdal-config /usr/bin/
+COPY --from=gdal-builder /usr/bin/geos-config /usr/bin/
 COPY --from=gdal-builder /usr/include /usr/include
 COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libgdal* /usr/lib/aarch64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libproj* /usr/lib/aarch64-linux-gnu/
@@ -22,6 +24,7 @@ COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libparquet* /usr/lib/aarch64
 COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libjxl* /usr/lib/aarch64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/liblerc* /usr/lib/aarch64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libQB3* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/cmake /usr/lib/aarch64-linux-gnu/cmake
 # Copy pkgconfig files for building Python packages
 COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/pkgconfig/gdal.pc /usr/lib/aarch64-linux-gnu/pkgconfig/
 COPY --from=gdal-builder /usr/local/lib/pkgconfig/proj.pc /usr/lib/aarch64-linux-gnu/pkgconfig/
@@ -55,7 +58,7 @@ COPY install.r install.r
 RUN Rscript install.r
 
 # Pre-install core spatial packages to avoid complex resolution backtracking
-RUN pip install --verbose --no-cache-dir \
+RUN uv pip install --verbose --no-cache-dir \
     numpy \
     "cligj>=0.5" \
     "click-plugins>=1.0" \
@@ -66,7 +69,7 @@ RUN pip install --verbose --no-cache-dir \
 
 ## Python extensions
 COPY requirements-cpu.txt requirements.txt
-RUN pip install --verbose --no-cache-dir -r requirements.txt && \
+RUN uv pip install --verbose --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
 # GDAL environment

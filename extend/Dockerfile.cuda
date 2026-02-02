@@ -3,6 +3,7 @@ ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
 
 # Stage 1: Get GDAL binaries with Arrow/Parquet support from official image
 FROM ${GDAL_IMAGE} AS gdal-builder
+RUN apt-get update && apt-get install -y libgeos-dev
 
 # Stage 2: Build our spatial image
 FROM $BASE 
@@ -12,6 +13,9 @@ USER root
 # Copy GDAL libraries and binaries from the official GDAL image
 # This includes Arrow/Parquet support that Ubuntu's GDAL lacks
 COPY --from=gdal-builder /usr/local /usr/local
+COPY --from=gdal-builder /usr/bin/gdal-config /usr/bin/
+COPY --from=gdal-builder /usr/bin/geos-config /usr/bin/
+COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/cmake /usr/lib/x86_64-linux-gnu/cmake
 COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgdal* /usr/lib/x86_64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libproj* /usr/lib/x86_64-linux-gnu/
 COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
@@ -50,7 +54,7 @@ RUN Rscript install.r && \
 
 ## Python extensions
 COPY requirements.cuda.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt && \
+RUN uv pip install --verbose --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
 # GDAL environment
