@@ -33,7 +33,9 @@ exactextract
 
 # Visualization
 cartopy
-jupytergis
+# jupytergis
+# jupyterlab>=4.5.3
+click==8.2.1
 leafmap
 localtileserver
 mapclassify

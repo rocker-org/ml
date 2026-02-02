@@ -12,19 +12,24 @@ USER root
 # Copy GDAL libraries and binaries from the official GDAL image
 # This includes Arrow/Parquet support that Ubuntu's GDAL lacks
 COPY --from=gdal-builder /usr/local /usr/local
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgdal* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libproj* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libarrow* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libparquet* /usr/lib/x86_64-linux-gnu/
+COPY --from=gdal-builder /usr/bin/gdal-config /usr/bin/
+COPY --from=gdal-builder /usr/include /usr/include
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libgdal* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libproj* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libgeos* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libarrow* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libparquet* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libjxl* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/liblerc* /usr/lib/aarch64-linux-gnu/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/libQB3* /usr/lib/aarch64-linux-gnu/
 # Copy pkgconfig files for building Python packages
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/pkgconfig/gdal.pc /usr/lib/x86_64-linux-gnu/pkgconfig/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/pkgconfig/proj.pc /usr/lib/x86_64-linux-gnu/pkgconfig/
+COPY --from=gdal-builder /usr/lib/aarch64-linux-gnu/pkgconfig/gdal.pc /usr/lib/aarch64-linux-gnu/pkgconfig/
+COPY --from=gdal-builder /usr/local/lib/pkgconfig/proj.pc /usr/lib/aarch64-linux-gnu/pkgconfig/
 
 # Set up GDAL paths for building Python packages
 ENV PATH="/usr/local/bin:$PATH"
-ENV GDAL_CONFIG=/usr/local/bin/gdal-config
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
+ENV GDAL_CONFIG=/usr/bin/gdal-config
+ENV PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 
 # Install runtime dependencies for GDAL
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,6 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmysqlclient21 libcfitsio10t64 libzstd1 libpq5 \
     libarmadillo12 libopenexr-3-1-30 libheif1 libavif16 \
     libdeflate0 libblosc1 liblz4-1 libbrotli1 \
+    libarchive13t64 libcrypto++8t64 libjxl0.7 liblerc4 \
+    libsz2 librasterlite2-1 \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 
@@ -47,9 +54,19 @@ USER ${NB_USER}
 COPY install.r install.r
 RUN Rscript install.r
 
+# Pre-install core spatial packages to avoid complex resolution backtracking
+RUN pip install --verbose --no-cache-dir \
+    numpy \
+    "cligj>=0.5" \
+    "click-plugins>=1.0" \
+    "shapely>=2.0" \
+    "fiona>=1.9" \
+    "rasterio>=1.3" \
+    pyproj
+
 ## Python extensions
 COPY requirements-cpu.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt && \
+RUN pip install --verbose --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
 # GDAL environment
