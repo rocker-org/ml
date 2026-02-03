@@ -115,26 +115,5 @@ echo "auth-none=1" >>/etc/rstudio/disable_auth_rserver.conf
 # don't assume conda, let package manager handle this
 # su ${NB_USER} -c "/opt/conda/bin/conda install -y jupyter-rsession-proxy"
 
-## Append repo-specific env vars to Renviron
-# We iterate over a whitelist of vars set in the Dockerfiles to ensure they
-# are available in RStudio sessions.
-VARS_TO_FORWARD="SHELL PYTHONBUFFERED CODE_EXTENSIONSDIR LANG VIRTUAL_ENV RETICULATE_PYTHON LD_LIBRARY_PATH GDAL_DATA PROJ_DATA GDAL_CONFIG PKG_CONFIG_PATH CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE PATH"
-RENVIRON="$RHOME/etc/Renviron"
-
-for VAR in $VARS_TO_FORWARD; do
-    if [ -n "${!VAR}" ]; then
-        VAL="${!VAR}"
-
-        # If the file exists, remove any existing lines for this variable to avoid duplicates
-        if [ -f "$RENVIRON" ]; then
-            sed -i "/^${VAR}=/d" "$RENVIRON"
-        fi
-        
-        # Append the new value
-        echo "${VAR}=${VAL}" >> "$RENVIRON"
-    fi
-done
-
 # Cleanup
 rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
