@@ -78,6 +78,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 
+# GDAL environment
+ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
+ENV GDAL_DATA=/usr/local/share/gdal
+ENV PROJ_DATA=/usr/local/share/proj
+
+## Ensure RStudio has access to environment variables
+RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/set_renviron.sh | bash
+
 USER ${NB_USER}
 
 # When run at build time, R automagically handles any necessary apt-gets
@@ -99,7 +107,4 @@ COPY requirements-cpu.txt requirements.txt
 RUN uv pip install --verbose --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
-# GDAL environment
-ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
-ENV GDAL_DATA=/usr/local/share/gdal
-ENV PROJ_DATA=/usr/local/share/proj
+
