@@ -3,7 +3,7 @@ name: Build CUDA-Spatial (GPU)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [master,main]
     paths:
       - 'extend/Dockerfile.cuda'
       - 'extend/requirements.cuda.txt'

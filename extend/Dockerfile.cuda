@@ -5,30 +5,61 @@ ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
 FROM ${GDAL_IMAGE} AS gdal-builder
 RUN apt-get update && apt-get install -y libgeos-dev
 
+# Detect architecture and set allow-list path
+RUN export ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        export ARCH_TRIPLET="x86_64-linux-gnu"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        export ARCH_TRIPLET="aarch64-linux-gnu"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    mkdir -p /opt/rootfs/usr/bin && \
+    mkdir -p /opt/rootfs/usr/include && \
+    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET} && \
+    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig && \
+    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET}/cmake && \
+    mkdir -p /opt/rootfs/usr/local && \
+    cp -r /usr/local/* /opt/rootfs/usr/local/ && \
+    \
+    cp /usr/bin/gdal-config /opt/rootfs/usr/bin/ && \
+    cp /usr/bin/geos-config /opt/rootfs/usr/bin/ && \
+    cp -r /usr/include/* /opt/rootfs/usr/include/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libgdal* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libproj* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libgeos* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libarrow* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libparquet* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libjxl* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp /usr/lib/${ARCH_TRIPLET}/libQB3* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    cp -r /usr/lib/${ARCH_TRIPLET}/cmake /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
+    \
+    # Copy pkgconfig files
+    cp /usr/lib/${ARCH_TRIPLET}/pkgconfig/gdal.pc /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig/ && \
+    cp /usr/local/lib/pkgconfig/proj.pc /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig/
+
 # Stage 2: Build our spatial image
 FROM $BASE 
 
 USER root
 
-# Copy GDAL libraries and binaries from the official GDAL image
-# This includes Arrow/Parquet support that Ubuntu's GDAL lacks
-COPY --from=gdal-builder /usr/local /usr/local
-COPY --from=gdal-builder /usr/bin/gdal-config /usr/bin/
-COPY --from=gdal-builder /usr/bin/geos-config /usr/bin/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/cmake /usr/lib/x86_64-linux-gnu/cmake
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgdal* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libproj* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libarrow* /usr/lib/x86_64-linux-gnu/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/libparquet* /usr/lib/x86_64-linux-gnu/
-# Copy pkgconfig files for building Python packages
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/pkgconfig/gdal.pc /usr/lib/x86_64-linux-gnu/pkgconfig/
-COPY --from=gdal-builder /usr/lib/x86_64-linux-gnu/pkgconfig/proj.pc /usr/lib/x86_64-linux-gnu/pkgconfig/
+# Copy all staged files from the builder
+COPY --from=gdal-builder /opt/rootfs /
 
-# Set up GDAL paths for building Python packages
+# Set up environment variables
+# We use a trick to dynamically set PKG_CONFIG_PATH based on available directories
+RUN if [ -d "/usr/lib/aarch64-linux-gnu" ]; then \
+        echo "Detected aarch64"; \
+        echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig" >> /etc/environment; \
+    else \
+        echo "Detected x86_64"; \
+        echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig" >> /etc/environment; \
+    fi
+
 ENV PATH="/usr/local/bin:$PATH"
-ENV GDAL_CONFIG=/usr/local/bin/gdal-config
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
+ENV GDAL_CONFIG=/usr/bin/gdal-config
+# Set a default for build time, though /etc/environment handles runtime
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 
 # Install runtime dependencies for GDAL
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -42,6 +73,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmysqlclient21 libcfitsio10t64 libzstd1 libpq5 \
     libarmadillo12 libopenexr-3-1-30 libheif1 libavif16 \
     libdeflate0 libblosc1 liblz4-1 libbrotli1 \
+    libarchive13t64 libcrypto++8t64 libjxl0.7 liblerc4 \
+    libsz2 librasterlite2-1 \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 
@@ -51,6 +84,16 @@ USER ${NB_USER}
 COPY install.r install.r
 RUN Rscript install.r && \
     rm -rf /tmp/* /var/tmp/*
+
+# Pre-install core spatial packages to avoid complex resolution backtracking
+RUN uv pip install --verbose --no-cache-dir \
+    numpy \
+    "cligj>=0.5" \
+    "click-plugins>=1.0" \
+    "shapely>=2.0" \
+    "fiona>=1.9" \
+    "rasterio>=1.3" \
+    pyproj
 
 ## Python extensions
 COPY requirements.cuda.txt requirements.txt
