@@ -75,7 +75,7 @@ COPY Rprofile /usr/lib/R/etc/Rprofile.site
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin
 
 ## Ensure RStudio has access to environment variables
-COPY set_renviron.sh /tmp/set_renviron.sh
+COPY --chown=${NB_USER}:${NB_USER} set_renviron.sh /tmp/set_renviron.sh
 RUN bash /tmp/set_renviron.sh
 
 WORKDIR /home/$NB_USER 
