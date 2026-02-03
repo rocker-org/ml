@@ -3,7 +3,7 @@ name: Build ML-Spatial (CPU)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [master,main]
     paths:
       - 'extend/Dockerfile.cpu'
       - 'extend/requirements-cpu.txt'
