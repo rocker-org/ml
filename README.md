@@ -32,6 +32,7 @@ To access a stable build, users may refer to specific SHA hash tags on the [GitH
 ## Features
 
 - **IDEs:** Jupyter Lab, RStudio Server, VSCode (code-server) with common extensions
+- **AI Coding Assistants:** [goose](https://block.github.io/goose) CLI and VSCode extension
 - **ML Plugins:** Tensorboard support
 - **Python:** 3.12 with pip-based environment at `/opt/venv` (user-writable)
 - **CUDA Support:** CUDA 13 runtime libraries (GPU image only)
@@ -99,6 +100,20 @@ This stack is designed with maximum compatibility with [JupyterHub](https://jupy
 
 Additional utilities and VSCode extensions are installed in `/opt/share` (via `XDG_DATA_HOME`). This allows pre-installation and avoids unnecessary bloat of users' home directories, which is important when many users access the same JupyterHub.  
 
+
+### AI Coding Assistants
+
+The [goose](https://block.github.io/goose) CLI and VSCode extension are pre-installed. Goose is configured via environment variables — inject these via your JupyterHub helm chart (or pass with `docker run -e`):
+
+| Variable | Description |
+|---|---|
+| `GOOSE_PROVIDER` | Set to `openai` for any OpenAI-compatible API |
+| `OPENAI_API_KEY` | API key |
+| `OPENAI_HOST` | Base URL host, e.g. `https://api.openai.com` |
+| `OPENAI_BASE_PATH` | API path, e.g. `/v1` |
+| `GOOSE_MODEL` | Model name, e.g. `gpt-4o` |
+
+Once set, `goose` is available in any terminal. The VSCode extension picks up the same environment variables automatically.
 
 ### Installing package binaries
 
