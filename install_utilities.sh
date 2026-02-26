@@ -38,9 +38,9 @@ echo '"\e[6~": history-search-forward' >> /etc/inputrc
 
 
 # opencode cli - installer hardcodes $HOME/.opencode/bin, so move to /usr/local/bin
-curl -fsSL https://opencode.ai/install | bash && \
-  mv "${HOME}/.opencode/bin/opencode" /usr/local/bin/opencode && \
-  rm -rf "${HOME}/.opencode"
+#curl -fsSL https://opencode.ai/install | bash && \
+#  mv "${HOME}/.opencode/bin/opencode" /usr/local/bin/opencode && \
+#  rm -rf "${HOME}/.opencode"
 
 chown -R ${NB_USER}:users /home/${NB_USER}/
 
