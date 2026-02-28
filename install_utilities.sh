@@ -6,7 +6,9 @@ apt-get update -qq && apt-get -y install \
   vim git-lfs wget curl qpdf sudo libcurl4-openssl-dev libxml2-dev python3-venv gettext libssl-dev libcrypto++-dev rclone
 
 # ensure user owns all of /opt/share (e.g. for vscode-plugins)
-mkdir /opt/share && chown -R ${NB_USER}:users /opt/share
+# xdg-config: XDG_CONFIG_HOME is set to /opt/share/xdg-config so app configs
+# (goose, code-server, etc.) land outside $HOME and survive JupyterHub mounts
+mkdir -p /opt/share/xdg-config && chown -R ${NB_USER}:users /opt/share
 
 # awscli tool for S3 use
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
