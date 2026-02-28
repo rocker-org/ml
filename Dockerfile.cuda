@@ -103,6 +103,9 @@ RUN Rscript /tmp/install.r && \
 
 USER $NB_USER
 
-CMD ["jupyter", "lab", "--no-browser", "--ip=0.0.0.0"]
+EXPOSE 8888
+COPY --chown=${NB_USER}:${NB_USER} start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+CMD ["/usr/local/bin/start.sh"]
 
 
