@@ -8,6 +8,8 @@ ENV PYTHONBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 # persistent install for vscode extensions
 ENV CODE_EXTENSIONSDIR=/opt/share/code-server
+# Redirect XDG config out of $HOME so it survives JupyterHub volume mounts
+ENV XDG_CONFIG_HOME=/opt/share/xdg-config
 
 # Set up JupyterLab user
 ARG NB_USER=jovyan
@@ -93,6 +95,4 @@ COPY --chown=${NB_USER}:${NB_USER} install.r /tmp/install.r
 RUN Rscript /tmp/install.r
 
 EXPOSE 8888
-COPY --chown=${NB_USER}:${NB_USER} start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-CMD ["/usr/local/bin/start.sh"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''", "--NotebookApp.password=''"]

@@ -11,9 +11,11 @@ curl -fsSL "$GOOSE_VSIX_URL" -o /tmp/vscode-goose.vsix
 sudo -u ${NB_USER:-jovyan} code-server --extensions-dir ${CODE_EXTENSIONSDIR} --install-extension /tmp/vscode-goose.vsix
 rm /tmp/vscode-goose.vsix
 
-# NRP custom provider config (stored system-wide; start.sh copies to ~/.config/goose at runtime)
-mkdir -p /opt/share/goose/custom_providers
-cat > /opt/share/goose/custom_providers/nrp.json <<'EOF'
+# NRP custom provider config.
+# Stored under $XDG_CONFIG_HOME (set to /opt/share/xdg-config in Dockerfile),
+# so goose finds it without touching $HOME — survives JupyterHub volume mounts.
+mkdir -p ${XDG_CONFIG_HOME}/goose/custom_providers
+cat > ${XDG_CONFIG_HOME}/goose/custom_providers/nrp.json <<'EOF'
 {
   "name": "nrp",
   "engine": "openai",
@@ -31,4 +33,4 @@ cat > /opt/share/goose/custom_providers/nrp.json <<'EOF'
   "requires_auth": true
 }
 EOF
-chown -R ${NB_USER:-jovyan}:users /opt/share/goose
+chown -R ${NB_USER:-jovyan}:users ${XDG_CONFIG_HOME}
