@@ -32,7 +32,7 @@ To access a stable build, users may refer to specific SHA hash tags on the [GitH
 ## Features
 
 - **IDEs:** Jupyter Lab, RStudio Server, VSCode (code-server) with common extensions
-- **AI Coding Assistants:** [goose](https://block.github.io/goose) CLI and VSCode extension
+- **AI Coding Assistants:** [opencode](https://opencode.ai) CLI and VSCode extension, [Roo Cline](https://github.com/RooVeterinaryInc/roo-cline) VSCode extension
 - **ML Plugins:** Tensorboard support
 - **Python:** 3.12 with pip-based environment at `/opt/venv` (user-writable)
 - **CUDA Support:** CUDA 13 runtime libraries (GPU image only)
@@ -103,17 +103,19 @@ Additional utilities and VSCode extensions are installed in `/opt/share` (via `X
 
 ### AI Coding Assistants
 
-The [goose](https://block.github.io/goose) CLI and VSCode extension are pre-installed. Goose is configured via environment variables — inject these via your JupyterHub helm chart (or pass with `docker run -e`):
+[opencode](https://opencode.ai) (CLI + VSCode extension) and [Roo Cline](https://github.com/RooVeterinaryInc/roo-cline) (VSCode extension) are pre-installed and pre-configured for the NRP Nautilus LLM endpoint.
+
+**opencode** has two providers enabled out of the box:
+- **NRP**: default provider, requires `OPENAI_API_KEY` injected via JupyterHub helm chart
+- **GitHub Copilot**: available to any user with a Copilot subscription — run `/connect` in opencode to authenticate via device flow (one-time per user; token persists in home volume)
+
+**Roo Cline** is configured automatically at Jupyter server start via a startup hook that reads `OPENAI_API_KEY` from the environment.
+
+The only env var required for NRP access:
 
 | Variable | Description |
 |---|---|
-| `GOOSE_PROVIDER` | Set to `openai` for any OpenAI-compatible API |
-| `OPENAI_API_KEY` | API key |
-| `OPENAI_HOST` | Base URL host, e.g. `https://api.openai.com` |
-| `OPENAI_BASE_PATH` | API path, e.g. `/v1` |
-| `GOOSE_MODEL` | Model name, e.g. `gpt-4o` |
-
-Once set, `goose` is available in any terminal. The VSCode extension picks up the same environment variables automatically.
+| `OPENAI_API_KEY` | NRP API key |
 
 ### Installing package binaries
 

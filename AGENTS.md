@@ -33,24 +33,44 @@ We use `/opt/share/` as the base for such files:
 Apps that follow the XDG Base Directory spec will read/write config here instead of
 `~/.config`, keeping their config outside the JupyterHub volume mount.
 
-**Goose** fully respects `XDG_CONFIG_HOME`. Its config (including custom providers)
-lives at `/opt/share/xdg-config/goose/`. Sessions and logs still go to
-`~/.local/share/goose/` and `~/.local/state/goose/` (persistent volume — correct behavior).
+**opencode** respects `XDG_CONFIG_HOME`. Its config is baked into the image at
+`/opt/share/xdg-config/opencode/opencode.json` with the NRP provider pre-configured.
+The API key is never stored in the image — it uses `{env:OPENAI_API_KEY}` syntax so
+opencode reads it from the environment at runtime.
 
-## Goose Configuration
+## opencode Configuration
 
-The NRP custom provider is defined at build time in `install_llms.sh` and stored at:
-```
-/opt/share/xdg-config/goose/custom_providers/nrp.json
-```
+opencode is pre-configured in the image at `/opt/share/xdg-config/opencode/opencode.json`
+with two providers enabled:
 
-At runtime, pass these env vars (e.g. via JupyterHub's `environment` config or `run.sh` locally):
+- **NRP**: OpenAI-compatible endpoint, default model `minimax-m2`. Requires `OPENAI_API_KEY`
+  injected at runtime. The `{env:OPENAI_API_KEY}` syntax means the key is never stored in
+  the image.
+- **GitHub Copilot**: Built-in provider. Users authenticate once via `/connect` in opencode
+  (device flow at `github.com/login/device`). The token is stored in
+  `~/.local/share/opencode/auth.json` (HOME persistent volume) and survives container
+  restarts. Alternatively, inject `GITHUB_TOKEN` via JupyterHub to skip interactive auth.
 
-```
-OPENAI_API_KEY=<key>
-GOOSE_PROVIDER=nrp
-GOOSE_MODEL=minimax-m2
-```
+## Roo Cline Configuration
 
-The NRP provider JSON already encodes the endpoint (`https://ellm.nrp-nautilus.io/v1`)
-and model (`minimax-m2`), so `GOOSE_PROVIDER=nrp` is sufficient for provider selection.
+Roo Cline stores its API provider config in VS Code **secret storage**, which falls back to
+in-memory on Linux (no libsecret). This means secrets reset on every code-server restart.
+
+To work around this, `/etc/jupyter/jupyter_server_config.py` is installed at build time.
+This hook runs when the Jupyter server starts (before the user accesses code-server) and:
+
+1. Reads `OPENAI_API_KEY` from the environment
+2. Writes a Roo settings import file to `/tmp/roo-cline/nrp-settings.json`
+3. Sets `roo-cline.autoImportSettingsPath` in `~/.local/share/code-server/User/settings.json`
+
+Roo re-reads `autoImportSettingsPath` on every extension activation and re-imports the NRP
+provider config (including API key) automatically each session.
+
+`/etc/jupyter/` is in Jupyter's config search path and is outside `$HOME`, so it persists
+across JupyterHub volume mounts. The generated `/tmp/roo-cline/nrp-settings.json` lives only
+for the duration of the container session (correct: it gets regenerated each time with the
+current `OPENAI_API_KEY`).
+
+The `~/.local/share/code-server/User/settings.json` entry persists in the user's home
+volume once written, so new users get it on first Jupyter start and it stays for subsequent
+sessions.
