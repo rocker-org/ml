@@ -87,7 +87,8 @@ COPY --chown=${NB_USER}:${NB_USER} vscode-extensions.txt /tmp/vscode-extensions.
 RUN xargs -n 1 code-server --extensions-dir ${CODE_EXTENSIONSDIR}  --install-extension < /tmp/vscode-extensions.txt
 
 USER root
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_llms.sh | bash
+COPY install_llms.sh install_llms.sh
+RUN bash install_llms.sh
 USER $NB_USER
 
 # When run at build-time, install.r automagically handles any necessary apt-gets
