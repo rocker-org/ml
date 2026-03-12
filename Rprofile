@@ -45,6 +45,18 @@ local({
   options(crayon.enabled = TRUE)
   Sys.unsetenv(c("CI", "GITHUB_ACTIONS"))
 
+  # In JupyterHub (code-server), htmlwidgets are served on localhost:PORT which the
+  # browser can't reach. Rewrite viewer URLs through jupyter-server-proxy so they
+  # are accessible at /user/NAME/proxy/PORT/.
+  prefix <- Sys.getenv("JUPYTERHUB_SERVICE_PREFIX", unset = "")
+  if (nchar(prefix) > 0) {
+    options(viewer = function(url, ...) {
+      url <- sub("^http://127\\.0\\.0\\.1:(\\d+)", paste0(prefix, "proxy/\\1"), url)
+      url <- sub("^http://localhost:(\\d+)",        paste0(prefix, "proxy/\\1"), url)
+      utils::browseURL(url)
+    })
+  }
+
   # Dummy token for API limits
   if(is.na(Sys.getenv("GITHUB_PAT", NA))){
     dummy <- c('ghp_SXg', 'LNM', 'Tu4cnal', 'tdqkZtBojc3s563G', 'iqv')
