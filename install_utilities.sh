@@ -3,7 +3,8 @@
 # some apt-get utilities. 
 # NOTE: BSPM will get those required for any R packages.
 apt-get update -qq && apt-get -y install \
-  vim git-lfs wget curl qpdf sudo libcurl4-openssl-dev libxml2-dev python3-venv gettext libssl-dev libcrypto++-dev rclone
+  vim git-lfs wget curl qpdf sudo libcurl4-openssl-dev libxml2-dev python3-venv gettext libssl-dev libcrypto++-dev rclone locales && \
+locale-gen en_US.UTF-8
 
 # ensure user owns all of /opt/share (e.g. for vscode-plugins)
 # xdg-config: XDG_CONFIG_HOME is set to /opt/share/xdg-config so app configs
