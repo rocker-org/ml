@@ -43,16 +43,17 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Create venv and upgrade pip
-RUN python3 -m venv $VIRTUAL_ENV && \
-    chgrp -R $NB_USER $VIRTUAL_ENV && \
-    chmod -R g+rwx $VIRTUAL_ENV && \
-    pip install --no-cache-dir --upgrade pip setuptools wheel
-
-USER ${NB_USER}
-# Install Python packages from requirements (CUDA-enabled)
+# IMPORTANT: All pip installs and the final chown must stay in ONE RUN command.
+# - pip installs run as root so jovyan cannot hit permission errors upgrading packages
+#   (e.g. setuptools) that root installed earlier in the same layer.
+# - chown transfers ownership to jovyan AFTER all installs complete, so later
+#   pip installs run as jovyan can freely update any package.
+# - chown in a SEPARATE RUN layer would duplicate every venv file, doubling image size.
 COPY requirements.cuda.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python3 -m venv $VIRTUAL_ENV && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /tmp/requirements.txt && \
+    chown -R $NB_USER:$NB_USER $VIRTUAL_ENV
 
 USER root
 
