@@ -14,7 +14,9 @@ torchaudio
 jupyterlab
 jupyterlab-git
 jupyter-resource-usage
-jupyter-rsession-proxy
+# Pinned to upstream main for the www-root-path double-slash fix (issue #41);
+# revert to pinned release once a version > 2.5.0 is on PyPI.
+jupyter-rsession-proxy @ git+https://github.com/jupyterhub/jupyter-rsession-proxy.git@main
 jupyter-vscode-proxy
 jupyterhub
 jupyter-tensorboard-proxy
