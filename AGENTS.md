@@ -33,17 +33,24 @@ We use `/opt/share/` as the base for such files:
 Apps that follow the XDG Base Directory spec will read/write config here instead of
 `~/.config`, keeping their config outside the JupyterHub volume mount.
 
-**opencode** respects `XDG_CONFIG_HOME`. Its config is baked into the image at
-`/opt/share/xdg-config/opencode/opencode.json` with the NRP provider pre-configured.
-The API key is never stored in the image — it uses `{env:OPENAI_API_KEY}` syntax so
-opencode reads it from the environment at runtime.
+**opencode** respects `XDG_CONFIG_HOME`, but `/opt/share/xdg-config/` is image-baked
+and not on the persistent HOME volume — so user edits there would not survive a
+container restart. Instead, the image ships a sysadmin **template** at
+`/opt/share/xdg-config/opencode/opencode.json`, and `OPENCODE_CONFIG` (set in
+`/etc/profile.d/opencode.sh` and in the jupyter server env) redirects opencode to
+`$HOME/.config/opencode/opencode.json`. The Jupyter server startup hook seeds the
+user copy from the template on first launch. Users edit freely and changes persist;
+delete the user copy and restart to re-seed from the current template. The API key
+is never stored in the image — `{env:OPENAI_API_KEY}` syntax makes opencode read it
+from the environment at runtime.
 
 ## opencode Configuration
 
-opencode is pre-configured in the image at `/opt/share/xdg-config/opencode/opencode.json`
-with two providers enabled:
+opencode reads `$HOME/.config/opencode/opencode.json` (via `OPENCODE_CONFIG`), seeded
+on first launch from the image template at `/opt/share/xdg-config/opencode/opencode.json`.
+Two providers are enabled out of the box:
 
-- **NRP**: OpenAI-compatible endpoint, default model `minimax-m2`. Requires `OPENAI_API_KEY`
+- **NRP**: OpenAI-compatible endpoint, default model `qwen3`. Requires `OPENAI_API_KEY`
   injected at runtime. The `{env:OPENAI_API_KEY}` syntax means the key is never stored in
   the image.
 - **GitHub Copilot**: Built-in provider. Users authenticate once via `/connect` in opencode
