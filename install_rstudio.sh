@@ -94,6 +94,12 @@ ln -fs /usr/lib/rstudio-server/bin/rserver /usr/local/bin
 # https://github.com/rocker-org/rocker-versioned2/issues/137
 rm -f /var/lib/rstudio-server/secure-cookie-key
 
+# RStudio 2026.05.0 "Golden Wattle" reads a root-owned session-rpc-key at
+# rserver startup. When run rootless via jupyter-rsession-proxy (as jovyan),
+# the baked root:root 0600 key is unreadable and rserver exits 1. Remove it so
+# it is regenerated per-run with appropriate ownership. See rocker-org/ml#42.
+rm -f /var/lib/rstudio-server/session-rpc-key
+
 ## RStudio wants an /etc/R, will populate from $R_HOME/etc
 mkdir -p /etc/R
 
