@@ -13,52 +13,137 @@ on:
       - requirements.cuda.txt
       - .github/workflows/build-cuda.yml
 
+# Build each architecture on its own native runner (arm64 on ubuntu-24.04-arm,
+# no QEMU), push each by digest to both registries, then assemble one multi-arch
+# manifest natively in each registry. Keeps arm64 a first-class target (NVIDIA
+# Spark, Apple Silicon) while staying within a single runner's disk budget.
+env:
+  GHCR_IMAGE: ghcr.io/rocker-org/cuda
+  DOCKER_IMAGE: rocker/cuda
+  TAGS: latest cuda13.0-py3.12-rapids25.12 cuda13.0-py3.12 cuda13.0
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
     permissions: write-all
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm   # native arm64 runner, no QEMU
     steps:
+      - name: Prepare platform name
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h
 
-      - uses: actions/checkout@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push CUDA Image
-        uses: docker/build-push-action@v4
+      - name: Build and push by digest (GHCR)
+        id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.cuda
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/rocker-org/cuda:latest
-            ghcr.io/rocker-org/cuda:cuda13.0-py3.12-rapids25.12
-            ghcr.io/rocker-org/cuda:cuda13.0-py3.12
-            ghcr.io/rocker-org/cuda:cuda13.0
-            rocker/cuda:latest
-            rocker/cuda:cuda13.0-py3.12-rapids25.12
-            rocker/cuda:cuda13.0-py3.12
-            rocker/cuda:cuda13.0
+          platforms: ${{ matrix.platform }}
           build-args: |
             NB_USER=jovyan
+          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Push to Docker Hub
+        id: dockerhub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cuda
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            NB_USER=jovyan
+          outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      # The two pushes are NOT guaranteed to share a digest (provenance /
+      # created-timestamp differ), so record each registry's own per-arch
+      # digest and let the merge job build each manifest from its own.
+      - name: Export digests
+        run: |
+          mkdir -p /tmp/digests/ghcr /tmp/digests/dockerhub
+          touch "/tmp/digests/ghcr/${GHCR_DIGEST#sha256:}"
+          touch "/tmp/digests/dockerhub/${DOCKER_DIGEST#sha256:}"
+        env:
+          GHCR_DIGEST: ${{ steps.build.outputs.digest }}
+          DOCKER_DIGEST: ${{ steps.dockerhub.outputs.digest }}
+
+      - name: Upload digests
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge manifests and push tags
+    runs-on: ubuntu-latest
+    needs: build
+    permissions: write-all
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Create multi-arch manifests (GHCR + Docker Hub)
+        working-directory: /tmp/digests
+        run: |
+          ghcr_refs=$(for f in ghcr/*; do printf "${GHCR_IMAGE}@sha256:%s " "$(basename "$f")"; done)
+          dock_refs=$(for f in dockerhub/*; do printf "${DOCKER_IMAGE}@sha256:%s " "$(basename "$f")"; done)
+          for t in $TAGS; do
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${t}" $ghcr_refs
+            docker buildx imagetools create -t "${DOCKER_IMAGE}:${t}" $dock_refs
+          done
+
+      - name: Inspect
+        run: docker buildx imagetools inspect "${GHCR_IMAGE}:latest"
