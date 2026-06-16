@@ -13,48 +13,117 @@ on:
       - requirements-cpu.txt
       - .github/workflows/build-ml.yml
 
+# Build each architecture on its own native runner (arm64 on ubuntu-24.04-arm,
+# no QEMU), push by digest, then assemble one multi-arch manifest. Native arm64
+# is far faster than emulation (the single-runner QEMU build took ~1h).
+env:
+  GHCR_IMAGE: ghcr.io/rocker-org/ml
+  DOCKER_IMAGE: rocker/ml
+  TAGS: latest py3.12
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
     permissions: write-all
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm   # native arm64 runner, no QEMU
     steps:
+      - name: Prepare platform name
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h
 
-      - uses: actions/checkout@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest (GHCR)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cpu
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            NB_USER=jovyan
+          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge manifests and push tags
+    runs-on: ubuntu-latest
+    needs: build
+    permissions: write-all
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push ML CPU Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: Dockerfile.cpu
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/rocker-org/ml:latest
-            ghcr.io/rocker-org/ml:py3.12
-            rocker/ml:latest
-            rocker/ml:py3.12
-          build-args: |
-            NB_USER=jovyan
+      - name: Create multi-arch manifest on GHCR
+        working-directory: /tmp/digests
+        run: |
+          refs=$(printf "${GHCR_IMAGE}@sha256:%s " *)
+          for t in $TAGS; do
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${t}" $refs
+          done
+
+      - name: Mirror multi-arch manifest to Docker Hub
+        run: |
+          for t in $TAGS; do
+            docker buildx imagetools create -t "${DOCKER_IMAGE}:${t}" "${GHCR_IMAGE}:${t}"
+          done
+
+      - name: Inspect
+        run: docker buildx imagetools inspect "${GHCR_IMAGE}:latest"
