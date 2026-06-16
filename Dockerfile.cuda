@@ -41,6 +41,7 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     build-essential \
+    tini \
     && rm -rf /var/lib/apt/lists/*
 
 # IMPORTANT: All pip installs and the final chown must stay in ONE RUN command.
@@ -108,6 +109,13 @@ RUN Rscript /tmp/install.r && \
 USER $NB_USER
 
 EXPOSE 8888
+
+# Run via tini as PID 1 so orphaned child processes are reaped. Without an init,
+# whatever runs as PID 1 (jupyter lab here, or jupyterhub-singleuser under
+# KubeSpawner) inherits orphans but does not wait() on them, so subprocess trees
+# from in-session tooling (coding agents, git, language servers, etc.) accumulate
+# as zombies. `-g` forwards signals to / reaps the whole process group.
+ENTRYPOINT ["tini", "-g", "--"]
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''", "--NotebookApp.password=''"]
 
 
