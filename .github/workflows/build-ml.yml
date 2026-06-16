@@ -77,7 +77,8 @@ jobs:
       # Re-push the same (cache-hot, no rebuild) content by digest to Docker Hub
       # so the per-arch digest exists in both registries; the merge job then
       # assembles the manifest natively in each (no fragile cross-registry copy).
-      - name: Push same digest to Docker Hub
+      - name: Push to Docker Hub
+        id: dockerhub
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -87,11 +88,17 @@ jobs:
             NB_USER=jovyan
           outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
-      - name: Export digest
+      # The two pushes are NOT guaranteed to share a digest (provenance /
+      # created-timestamp differ), so record each registry's own per-arch
+      # digest and let the merge job build each manifest from its own.
+      - name: Export digests
         run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          mkdir -p /tmp/digests/ghcr /tmp/digests/dockerhub
+          touch "/tmp/digests/ghcr/${GHCR_DIGEST#sha256:}"
+          touch "/tmp/digests/dockerhub/${DOCKER_DIGEST#sha256:}"
+        env:
+          GHCR_DIGEST: ${{ steps.build.outputs.digest }}
+          DOCKER_DIGEST: ${{ steps.dockerhub.outputs.digest }}
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
@@ -133,11 +140,11 @@ jobs:
       - name: Create multi-arch manifests (GHCR + Docker Hub)
         working-directory: /tmp/digests
         run: |
-          for img in "${GHCR_IMAGE}" "${DOCKER_IMAGE}"; do
-            refs=$(printf "${img}@sha256:%s " *)
-            for t in $TAGS; do
-              docker buildx imagetools create -t "${img}:${t}" $refs
-            done
+          ghcr_refs=$(for f in ghcr/*; do printf "${GHCR_IMAGE}@sha256:%s " "$(basename "$f")"; done)
+          dock_refs=$(for f in dockerhub/*; do printf "${DOCKER_IMAGE}@sha256:%s " "$(basename "$f")"; done)
+          for t in $TAGS; do
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${t}" $ghcr_refs
+            docker buildx imagetools create -t "${DOCKER_IMAGE}:${t}" $dock_refs
           done
 
       - name: Inspect
