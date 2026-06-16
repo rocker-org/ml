@@ -63,7 +63,7 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push by digest (GHCR + Docker Hub)
+      - name: Build and push by digest (GHCR)
         id: build
         uses: docker/build-push-action@v6
         with:
@@ -72,9 +72,20 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             NB_USER=jovyan
-          outputs: |
-            type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-            type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      # Re-push the same (cache-hot, no rebuild) content by digest to Docker Hub
+      # so the per-arch digest exists in both registries; the merge job then
+      # assembles the manifest natively in each (no fragile cross-registry copy).
+      - name: Push same digest to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cpu
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            NB_USER=jovyan
+          outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
         run: |
