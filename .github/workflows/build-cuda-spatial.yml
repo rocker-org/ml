@@ -18,47 +18,118 @@ on:
     types:
       - completed
 
+# Per-arch native builds pushed by digest, then merged into one multi-arch
+# manifest -- keeps arm64 (NVIDIA Spark, Apple Silicon) without the
+# single-runner amd64+arm64 (QEMU) build that ran out of disk on this image.
+env:
+  GHCR_IMAGE: ghcr.io/rocker-org/cuda-spatial
+  DOCKER_IMAGE: rocker/cuda-spatial
+  TAGS: latest
+
 jobs:
   build:
+    name: Build ${{ matrix.platform }}
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions: write-all
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm   # native arm64 runner, no QEMU
     steps:
+      - name: Prepare platform name
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h
 
-      - uses: actions/checkout@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest (GHCR)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: extend
+          file: extend/Dockerfile.cuda
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BASE=rocker/cuda:latest
+          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge manifests and push tags
+    runs-on: ubuntu-latest
+    needs: build
+    permissions: write-all
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push CUDA-Spatial
-        uses: docker/build-push-action@v4
-        with:
-          context: extend
-          file: extend/Dockerfile.cuda
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/rocker-org/cuda-spatial:latest
-            rocker/cuda-spatial:latest
-          build-args: |
-            BASE=rocker/cuda:latest
+      - name: Create multi-arch manifest on GHCR
+        working-directory: /tmp/digests
+        run: |
+          refs=$(printf "${GHCR_IMAGE}@sha256:%s " *)
+          for t in $TAGS; do
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${t}" $refs
+          done
+
+      - name: Mirror multi-arch manifest to Docker Hub
+        run: |
+          for t in $TAGS; do
+            docker buildx imagetools create -t "${DOCKER_IMAGE}:${t}" "${GHCR_IMAGE}:${t}"
+          done
+
+      - name: Inspect
+        run: docker buildx imagetools inspect "${GHCR_IMAGE}:latest"
