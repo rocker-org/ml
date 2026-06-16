@@ -18,9 +18,8 @@ on:
     types:
       - completed
 
-# Per-arch native builds pushed by digest, then merged into one multi-arch
-# manifest -- keeps arm64 (NVIDIA Spark, Apple Silicon) without the
-# single-runner amd64+arm64 (QEMU) build that ran out of disk on this image.
+# Per-arch native builds (arm64 on ubuntu-24.04-arm, no QEMU) pushed by digest
+# to both registries, then a multi-arch manifest assembled natively in each.
 env:
   GHCR_IMAGE: ghcr.io/rocker-org/cuda-spatial
   DOCKER_IMAGE: rocker/cuda-spatial
@@ -63,6 +62,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
       - name: Build and push by digest (GHCR)
         id: build
         uses: docker/build-push-action@v6
@@ -74,13 +79,30 @@ jobs:
             BASE=rocker/cuda:latest
           outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+      - name: Push to Docker Hub
+        id: dockerhub
+        uses: docker/build-push-action@v6
+        with:
+          context: extend
+          file: extend/Dockerfile.cuda
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BASE=rocker/cuda:latest
+          outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
-      - name: Upload digest
+      # The two pushes are NOT guaranteed to share a digest (provenance /
+      # created-timestamp differ), so record each registry's own per-arch
+      # digest and let the merge job build each manifest from its own.
+      - name: Export digests
+        run: |
+          mkdir -p /tmp/digests/ghcr /tmp/digests/dockerhub
+          touch "/tmp/digests/ghcr/${GHCR_DIGEST#sha256:}"
+          touch "/tmp/digests/dockerhub/${DOCKER_DIGEST#sha256:}"
+        env:
+          GHCR_DIGEST: ${{ steps.build.outputs.digest }}
+          DOCKER_DIGEST: ${{ steps.dockerhub.outputs.digest }}
+
+      - name: Upload digests
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
@@ -117,18 +139,14 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Create multi-arch manifest on GHCR
+      - name: Create multi-arch manifests (GHCR + Docker Hub)
         working-directory: /tmp/digests
         run: |
-          refs=$(printf "${GHCR_IMAGE}@sha256:%s " *)
+          ghcr_refs=$(for f in ghcr/*; do printf "${GHCR_IMAGE}@sha256:%s " "$(basename "$f")"; done)
+          dock_refs=$(for f in dockerhub/*; do printf "${DOCKER_IMAGE}@sha256:%s " "$(basename "$f")"; done)
           for t in $TAGS; do
-            docker buildx imagetools create -t "${GHCR_IMAGE}:${t}" $refs
-          done
-
-      - name: Mirror multi-arch manifest to Docker Hub
-        run: |
-          for t in $TAGS; do
-            docker buildx imagetools create -t "${DOCKER_IMAGE}:${t}" "${GHCR_IMAGE}:${t}"
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${t}" $ghcr_refs
+            docker buildx imagetools create -t "${DOCKER_IMAGE}:${t}" $dock_refs
           done
 
       - name: Inspect
