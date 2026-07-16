@@ -5,4 +5,4 @@ quarto.quarto
 posit.shiny
 reditorsupport.r
 posit.air-vscode
-kilocode.kilocode
+kilocode.kilo-code
