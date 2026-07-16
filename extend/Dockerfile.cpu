@@ -3,7 +3,11 @@ ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
 
 # Stage 1: Get GDAL binaries with Arrow/Parquet support from official image
 FROM ${GDAL_IMAGE} AS gdal-builder
-RUN apt-get update && apt-get install -y libgeos-dev
+# The upstream GDAL image ships an Apache Arrow apt source whose signing key has
+# rotated, breaking `apt-get update`. Arrow libs are already baked into the image
+# and we only need libgeos-dev (from Ubuntu's own repos), so drop the stale source.
+RUN rm -f /etc/apt/sources.list.d/apache-arrow.sources && \
+    apt-get update && apt-get install -y libgeos-dev
 
 # Detect architecture and set allow-list path
 RUN export ARCH=$(uname -m) && \
