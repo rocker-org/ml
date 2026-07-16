@@ -103,7 +103,7 @@ jobs:
           DOCKER_DIGEST: ${{ steps.dockerhub.outputs.digest }}
 
       - name: Upload digests
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -117,7 +117,7 @@ jobs:
     permissions: write-all
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           path: /tmp/digests
           pattern: digests-*
