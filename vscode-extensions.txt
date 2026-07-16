@@ -4,8 +4,5 @@ ms-vscode.live-server
 quarto.quarto
 posit.shiny
 reditorsupport.r
-alefragnani.project-manager
 posit.air-vscode
-RooVeterinaryInc.roo-cline
-sst-dev.opencode
-
+kilocode.kilocode
