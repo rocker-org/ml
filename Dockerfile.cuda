@@ -73,7 +73,8 @@ RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/in
 RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile -o /usr/lib/R/etc/Rprofile.site
 
 # RStudio
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_rstudio.sh | bash
+COPY install_rstudio.sh install_rstudio.sh
+RUN bash install_rstudio.sh
 
 
 ## Add rstudio's binaries to path for quarto
