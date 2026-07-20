@@ -6,3 +6,4 @@ posit.shiny
 reditorsupport.r
 posit.air-vscode
 kilocode.kilo-code
+tomoki1207.pdf
