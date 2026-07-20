@@ -25,64 +25,64 @@ apt-get update && apt-get -y install \
 ARCH=$(dpkg --print-architecture)
 source /etc/os-release
 
-## Download RStudio Server for Ubuntu 18+
+## RStudio Server package we download and install below
 DOWNLOAD_FILE=rstudio-server.deb
 
+# Normalize "latest" to "stable"
 if [ "$RSTUDIO_VERSION" = "latest" ]; then
     RSTUDIO_VERSION="stable"
 fi
 
-# Handle ARM64 architecture
-# ARM64 builds are only available for jammy (22.04), not focal, bionic, or noble
-if [ "$ARCH" = "arm64" ]; then
-    echo "Detected ARM64 architecture, using appropriate RStudio Server build..."
-    
-    # ARM64 builds only available for Ubuntu 22.04 (jammy)
-    # Noble (24.04) doesn't have separate ARM64 builds yet, use jammy
-    if [ "$UBUNTU_CODENAME" != "jammy" ]; then
-        echo "Using jammy build for ARM64 (current codename: $UBUNTU_CODENAME)..."
-        UBUNTU_CODENAME="jammy"
+# RStudio Server .deb builds are only published for a limited set of Ubuntu
+# codenames, so map the ones we run on to the nearest available build:
+#   - noble (24.04) has no dedicated server build yet -> use jammy
+#   - focal (20.04) -> use jammy
+#   - arm64 is only published for jammy
+case "$UBUNTU_CODENAME" in
+    noble | focal) UBUNTU_CODENAME="jammy" ;;
+esac
+if [ "$ARCH" = "arm64" ] && [ "$UBUNTU_CODENAME" != "jammy" ]; then
+    UBUNTU_CODENAME="jammy"
+fi
+
+# Resolve the "stable" keyword to a concrete version number.
+#
+# The old https://rstudio.org/download/latest/stable/... "latest" redirect now
+# returns 404 (rocker-org/ml#48), so instead we read the current published
+# version from Posit's version file and download the numbered artifact directly.
+# current.ver looks like "2026.07.0+139.pro9"; strip the trailing Pro suffix and
+# turn the build separator "+" into "-" to get the open-source package version,
+# e.g. "2026.07.0-139".
+if [ "$RSTUDIO_VERSION" = "stable" ]; then
+    RSTUDIO_VERSION="$(wget -qO- https://download2.rstudio.org/current.ver | sed -e 's/\.pro[0-9]*$//' -e 's/+/-/')"
+    if [ -z "$RSTUDIO_VERSION" ]; then
+        echo "ERROR: could not resolve the latest stable RStudio Server version" >&2
+        exit 1
     fi
-    
-    if [ "$RSTUDIO_VERSION" = "stable" ]; then
-        # Use latest stable version from S3 bucket (verified working)
-        # Current stable version as of Nov 2025
-        RSTUDIO_VERSION="2025.09.2-418"
-        echo "Downloading RStudio Server ${RSTUDIO_VERSION} for ARM64..."
-        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
-    elif [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
-        # Use daily builds for preview/daily
-        # Get the latest daily build number - using a recent known working version
-        RSTUDIO_VERSION="2025.12.0-daily-302"
-        echo "Downloading RStudio Server daily build ${RSTUDIO_VERSION} for ARM64..."
-        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
-    else
-        # User specified a specific version
-        echo "Downloading RStudio Server ${RSTUDIO_VERSION} for ARM64..."
-        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
+    echo "Resolved latest stable RStudio Server version: ${RSTUDIO_VERSION}"
+fi
+
+if [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
+    # Resolve the latest daily server build for this platform from the dailies
+    # index (JSON) and download the URL it advertises directly.
+    echo "Resolving latest daily RStudio Server build for ${UBUNTU_CODENAME}/${ARCH}..."
+    DAILY_URL="$(wget -qO- https://dailies.rstudio.com/rstudio/latest/index.json |
+        grep -o "https://[^\"]*/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-[^\"]*\.deb" | head -n1)"
+    if [ -z "$DAILY_URL" ]; then
+        echo "ERROR: could not resolve a daily RStudio Server build for ${UBUNTU_CODENAME}/${ARCH}" >&2
+        exit 1
     fi
+    echo "Downloading ${DAILY_URL}"
+    wget "$DAILY_URL" -O "$DOWNLOAD_FILE"
 else
-    # AMD64/x86_64 architecture - use standard installation
-    
-    # Apply Ubuntu codename conversions for x86_64
-    if [ "$UBUNTU_CODENAME" = "focal" ]; then
-        UBUNTU_CODENAME="bionic"
-    fi
-    
-    # TODO: remove this workaround for Ubuntu 24.04
-    if [ "$UBUNTU_CODENAME" = "noble" ]; then
-        UBUNTU_CODENAME="jammy"
-    fi
-    
-    if [ "$RSTUDIO_VERSION" = "stable" ] || [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
-        if [ "$UBUNTU_CODENAME" = "bionic" ]; then
-            UBUNTU_CODENAME="focal"
-        fi
-        wget "https://rstudio.org/download/latest/${RSTUDIO_VERSION}/server/${UBUNTU_CODENAME}/rstudio-server-latest-${ARCH}.deb" -O "$DOWNLOAD_FILE"
-    else
-        wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE" ||
-            wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
-    fi
+    # Concrete version number (passed in explicitly or resolved from "stable").
+    # Normalize any "+" build separator to "-" to match the package filename.
+    RSTUDIO_VERSION="${RSTUDIO_VERSION/"+"/"-"}"
+    echo "Downloading RStudio Server ${RSTUDIO_VERSION} for ${UBUNTU_CODENAME}/${ARCH}..."
+    # download2 hosts the current x86_64 release; the S3 build bucket is the
+    # fallback and also serves arm64 builds and older versions.
+    wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION}-${ARCH}.deb" -O "$DOWNLOAD_FILE" ||
+        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${ARCH}/rstudio-server-${RSTUDIO_VERSION}-${ARCH}.deb" -O "$DOWNLOAD_FILE"
 fi
 
 gdebi --non-interactive "$DOWNLOAD_FILE"
