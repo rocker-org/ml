@@ -12,15 +12,40 @@ This folder contains the spatial extension images (`rocker/cuda-spatial` and `ro
 ### GDAL
 
 These images use the GDAL that ships with the Ubuntu base (GDAL 3.12 on Ubuntu
-26.04). R's `sf`/`terra` come from r2u as prebuilt binaries linked against that
-same system library, so there is a single, consistent GDAL throughout.
+26.04). Everything binds that one library:
 
-Ubuntu does not enable GDAL's Arrow/Parquet drivers, so `.parquet` is not
-readable through `ogr2ogr`/`st_read()`. For GeoParquet use the `arrow` and
-`geoarrow` R packages, or `geopandas`/`pyarrow` in Python.
+- R's `sf`/`terra` come from r2u as prebuilt binaries linked against it
+- the Python packages that wrap GEOS/PROJ/GDAL (`rasterio`, `fiona`, `pyogrio`,
+  `pyproj`, `shapely`) are built from source against it, rather than taking
+  wheels that vendor their own copies
+- `gdal-bin` provides `ogrinfo`/`ogr2ogr` against the same library
 
-Note that the Python geospatial wheels (`rasterio`, `fiona`, `pyogrio`) each
-vendor their own copy of GDAL and do not use the system library.
+The build fails if any Python binding reports a GDAL version other than
+`gdal-config --version`, so a wheel silently reintroducing a second GDAL is a
+build error rather than a surprise at runtime.
+
+### Arrow/Parquet
+
+Ubuntu does not enable GDAL's Arrow/Parquet drivers -- `libarrow-dev` is not in
+GDAL's `Build-Depends`, and no Ubuntu package ships the drivers separately.
+Upstream builds them as plugins, so these images compile just those two drivers
+from the matching GDAL source against the distro's libgdal and libarrow, and
+install them into `gdalplugins/`.
+
+The result is `(Geo)Parquet` and `(Geo)Arrow` read/write available everywhere
+that binds GDAL -- `sf`, `terra`, `ogr2ogr`, `pyogrio`, `fiona`, `geopandas` --
+including remote files over `/vsis3` and `/vsicurl`:
+
+```r
+st_write(nc, "out.parquet", driver = "Parquet")
+st_read("/vsis3/bucket/data.parquet")
+```
+
+Note `sf` does not map the `.parquet` extension to a driver, so `driver =
+"Parquet"` is required when writing. Reading auto-detects.
+
+The `arrow` and `geoarrow` R packages are also installed, with S3 and GCS
+support, for working with (Geo)Parquet outside GDAL.
 
 ### Included Packages
 

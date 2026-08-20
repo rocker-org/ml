@@ -1,25 +1,68 @@
 ARG BASE=rocker/cuda
+
+# Stage 1: build GDAL's Arrow/Parquet drivers as plugins.
+#
+# Ubuntu ships GDAL without these drivers -- libarrow-dev is not in GDAL's
+# Build-Depends, so cmake never finds Arrow and the code is simply absent from
+# libgdal. Upstream builds them as dlopen'd plugins precisely so they can be
+# added without touching libgdal, which is what we do here: compile the two
+# driver targets against the *distro's* GDAL and Arrow, keep the two .so files,
+# throw the rest of the build away.
+#
+# Building from $BASE rather than a bare ubuntu image is deliberate: it
+# guarantees the same apt sources, so the plugin is compiled against exactly the
+# libgdal and libarrow the final image will load it into. Plugin and host must
+# agree on both ABIs.
+FROM $BASE AS plugin-builder
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build ca-certificates curl \
+    libgdal-dev libarrow-dev libparquet-dev libarrow-dataset-dev libarrow-acero-dev
+WORKDIR /src
+RUN GDAL_VER="$(gdal-config --version)" && \
+    echo "Building Arrow/Parquet plugins for GDAL ${GDAL_VER}" && \
+    curl -sL "https://github.com/OSGeo/gdal/releases/download/v${GDAL_VER}/gdal-${GDAL_VER}.tar.gz" \
+      | tar xz && \
+    mv "gdal-${GDAL_VER}" gdal && \
+    cmake -S gdal -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_APPS=OFF -DBUILD_TESTING=OFF \
+      -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JAVA_BINDINGS=OFF -DBUILD_CSHARP_BINDINGS=OFF \
+      -DGDAL_BUILD_OPTIONAL_DRIVERS=OFF -DOGR_BUILD_OPTIONAL_DRIVERS=OFF \
+      -DGDAL_USE_ARROW=ON -DGDAL_USE_PARQUET=ON -DGDAL_USE_ARROWDATASET=ON \
+      -DOGR_ENABLE_DRIVER_ARROW=ON -DOGR_ENABLE_DRIVER_ARROW_PLUGIN=ON \
+      -DOGR_ENABLE_DRIVER_PARQUET=ON -DOGR_ENABLE_DRIVER_PARQUET_PLUGIN=ON && \
+    cmake --build build --target ogr_Parquet ogr_Arrow -j"$(nproc)" && \
+    mkdir /plugins && cp build/gdalplugins/ogr_Parquet.so build/gdalplugins/ogr_Arrow.so /plugins/
+
+# Stage 2: the spatial image
 FROM $BASE
 
 USER root
 
-# GDAL/GEOS/PROJ come from Ubuntu itself (26.04 ships GDAL 3.12), so there is no
-# multi-stage copy from the OSGeo image any more. That copy was dead weight: r2u
-# installs prebuilt r-cran-sf/terra linked against the distro libgdal, and the
-# Python wheels vendor their own GDAL, so nothing ever loaded the copied library.
-# Note Ubuntu does not build GDAL's Arrow/Parquet drivers; use the arrow/geoarrow
-# R packages or pyarrow/geopandas for GeoParquet.
-# libgdal-dev supplies gdal-config, needed by any Python spatial package that
-# has no wheel for the base image's Python and must build from its sdist
-# (fiona, currently). Those then link this same system GDAL.
+# GDAL/GEOS/PROJ come from Ubuntu itself (26.04 ships GDAL 3.12). The -dev
+# packages are needed because the Python spatial packages below are built from
+# source against them.
 # Do NOT delete /var/lib/apt/lists here: bspm shells out to apt to install the
 # r-cran-* binaries, and with the lists emptied it cannot find them and silently
 # falls back to compiling every R package from source.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gdal-bin \
-    libgdal-dev
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    proj-bin \
+    libarrow2300 libparquet2300 libarrow-dataset2300 libarrow-acero2300
+
+COPY --from=plugin-builder /plugins /tmp/plugins
+RUN PLUGDIR="/usr/lib/$(gcc -print-multiarch)/gdalplugins" && \
+    mkdir -p "$PLUGDIR" && mv /tmp/plugins/*.so "$PLUGDIR/" && rmdir /tmp/plugins && \
+    ogrinfo --formats | grep -q '^  Parquet ' || \
+      { echo "ERROR: Parquet driver did not load -- plugin/libgdal ABI mismatch?"; exit 1; }
 
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
+# pyproj's sdist looks for the proj executable and headers under PROJ_DIR
+ENV PROJ_DIR=/usr
 
 ## Ensure RStudio has access to environment variables
 RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/set_renviron.sh | bash
@@ -31,8 +74,16 @@ COPY install.r install.r
 RUN Rscript install.r && \
     rm -rf /tmp/* /var/tmp/*
 
+# Build the GEOS/PROJ/GDAL-linked packages from source against the system
+# libraries rather than taking wheels that vendor their own copies. Otherwise
+# the image carries several GDALs, which one you get depends on whether a wheel
+# happens to exist for this Python, and the vendored copies cannot see the
+# Parquet plugin installed above.
+ENV SPATIAL_NO_BINARY="--no-binary rasterio --no-binary fiona --no-binary pyogrio \
+--no-binary pyproj --no-binary shapely"
+
 # Pre-install core spatial packages to avoid complex resolution backtracking
-RUN uv pip install --verbose --no-cache-dir \
+RUN uv pip install --verbose --no-cache-dir ${SPATIAL_NO_BINARY} \
     numpy \
     "cligj>=0.5" \
     "click-plugins>=1.0" \
@@ -43,5 +94,13 @@ RUN uv pip install --verbose --no-cache-dir \
 
 ## Python extensions
 COPY requirements.cuda.txt requirements.txt
-RUN uv pip install --verbose --no-cache-dir -r requirements.txt && \
+RUN uv pip install --verbose --no-cache-dir ${SPATIAL_NO_BINARY} -r requirements.txt && \
     rm requirements.txt
+
+# Fail the build if anything silently reverted to a vendored GDAL
+RUN python -c "\
+import rasterio, fiona, pyogrio, subprocess, sys;\
+sysgdal = subprocess.run(['gdal-config','--version'], capture_output=True, text=True).stdout.strip();\
+seen = {'rasterio': rasterio.__gdal_version__, 'fiona': fiona.__gdal_version__, 'pyogrio': pyogrio.__gdal_version_string__};\
+bad = {k: v for k, v in seen.items() if v != sysgdal};\
+sys.exit('ERROR: not linked against system GDAL %s: %s' % (sysgdal, bad)) if bad else print('all Python bindings on system GDAL', sysgdal)"

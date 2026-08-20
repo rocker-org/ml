@@ -21,10 +21,12 @@ This repository contains images for machine learning and GPU-based computation i
   - Tags: `latest`
 
 The spatial images use the GDAL provided by the Ubuntu base (**GDAL 3.12** on
-Ubuntu 26.04), which R's `sf`/`terra` link against directly. They add a full
+Ubuntu 26.04). R's `sf`/`terra` and the Python bindings (`rasterio`, `fiona`,
+`pyogrio`, ...) all link that single library, and GDAL's **Arrow/Parquet**
+drivers -- which Ubuntu does not ship -- are compiled as plugins against it. So
+`(Geo)Parquet` read/write works from `sf`, `terra`, `ogr2ogr` and `geopandas`
+alike, including remote files over `/vsis3` and `/vsicurl`. They also add a full
 suite of geospatial packages: GeoPandas, Rasterio, Xarray, PySTAC, etc.
-GeoParquet is available through `arrow`/`geoarrow` in R and `geopandas`/`pyarrow`
-in Python; Ubuntu's GDAL build does not include the Arrow/Parquet drivers.
 
 See [extend/README.md](extend/README.md) for details on the spatial image build.
 
