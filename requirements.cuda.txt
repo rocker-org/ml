@@ -1,7 +1,9 @@
-# RAPIDS packages with CUDA 13 support (25.12 stable release)
+# RAPIDS packages with CUDA 13 support
 # cudf includes built-in Polars interoperability (df.to_polars() / cudf.from_polars())
 --extra-index-url=https://pypi.nvidia.com
-cudf-cu13==25.12.*
+# 26.x ships cp311-abi3 wheels (usable on the base image's Python 3.14);
+# the 25.12 series was cp313-only and cannot install here.
+cudf-cu13>=26.4
 
 
 # PyTorch with CUDA 13 (from PyTorch index)

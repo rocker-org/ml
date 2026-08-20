@@ -1,5 +1,5 @@
 # CPU-only pip-based image
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
@@ -25,11 +25,11 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 USER root
 
-# Ubuntu 24.04 base has ubuntu user/group at UID/GID 1000, rename to jovyan
+# Ubuntu 26.04 base has ubuntu user/group at UID/GID 1000, rename to jovyan
 RUN groupmod -n ${NB_USER} ubuntu && \
     usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu
 
-# Install Python 3.12 (default in Ubuntu 24.04) and system dependencies
+# Install Python 3.14 (default in Ubuntu 26.04) and system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-venv \

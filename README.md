@@ -20,10 +20,11 @@ This repository contains images for machine learning and GPU-based computation i
 - **`rocker/ml-spatial`** - Extends `rocker/ml` with geospatial packages
   - Tags: `latest`
 
-The spatial images include **GDAL 3.10 with Arrow/Parquet support** via multi-stage build from the official OSGeo GDAL image. This enables:
-- **GeoParquet** format support for efficient geospatial data storage
-- **Apache Arrow** integration for high-performance data exchange
-- Full suite of geospatial packages: GeoPandas, Rasterio, Xarray, PySTAC, etc.
+The spatial images use the GDAL provided by the Ubuntu base (**GDAL 3.12** on
+Ubuntu 26.04), which R's `sf`/`terra` link against directly. They add a full
+suite of geospatial packages: GeoPandas, Rasterio, Xarray, PySTAC, etc.
+GeoParquet is available through `arrow`/`geoarrow` in R and `geopandas`/`pyarrow`
+in Python; Ubuntu's GDAL build does not include the Arrow/Parquet drivers.
 
 See [extend/README.md](extend/README.md) for details on the spatial image build.
 

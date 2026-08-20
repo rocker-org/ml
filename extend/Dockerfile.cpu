@@ -1,91 +1,25 @@
 ARG BASE=rocker/ml
-ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
-
-# Stage 1: Get GDAL binaries with Arrow/Parquet support from official image
-FROM ${GDAL_IMAGE} AS gdal-builder
-# The upstream GDAL image ships an Apache Arrow apt source whose signing key has
-# rotated, breaking `apt-get update`. Arrow libs are already baked into the image
-# and we only need libgeos-dev (from Ubuntu's own repos), so drop the stale source.
-RUN rm -f /etc/apt/sources.list.d/apache-arrow.sources && \
-    apt-get update && apt-get install -y libgeos-dev
-
-# Detect architecture and set allow-list path
-RUN export ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        export ARCH_TRIPLET="x86_64-linux-gnu"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-        export ARCH_TRIPLET="aarch64-linux-gnu"; \
-    else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    mkdir -p /opt/rootfs/usr/bin && \
-    mkdir -p /opt/rootfs/usr/include && \
-    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET} && \
-    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig && \
-    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET}/cmake && \
-    mkdir -p /opt/rootfs/usr/local && \
-    cp -r /usr/local/* /opt/rootfs/usr/local/ && \
-    \
-    cp /usr/bin/gdal-config /opt/rootfs/usr/bin/ && \
-    cp /usr/bin/geos-config /opt/rootfs/usr/bin/ && \
-    cp -r /usr/include/* /opt/rootfs/usr/include/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libgdal* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libproj* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libgeos* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libarrow* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libparquet* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libjxl* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libQB3* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp -r /usr/lib/${ARCH_TRIPLET}/cmake /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    \
-    # Copy pkgconfig files
-    cp /usr/lib/${ARCH_TRIPLET}/pkgconfig/gdal.pc /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig/ && \
-    cp /usr/local/lib/pkgconfig/proj.pc /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig/
-
-# Stage 2: Build our spatial image
-FROM $BASE 
+FROM $BASE
 
 USER root
 
-# Copy all staged files from the builder
-COPY --from=gdal-builder /opt/rootfs /
-
-# Set up environment variables
-# We use a trick to dynamically set PKG_CONFIG_PATH based on available directories
-RUN if [ -d "/usr/lib/aarch64-linux-gnu" ]; then \
-        echo "Detected aarch64"; \
-        echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig" >> /etc/environment; \
-    else \
-        echo "Detected x86_64"; \
-        echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig" >> /etc/environment; \
-    fi
-
-ENV PATH="/usr/local/bin:$PATH"
-ENV GDAL_CONFIG=/usr/bin/gdal-config
-# Set a default for build time, though /etc/environment handles runtime
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
-
-# Install runtime dependencies for GDAL
+# GDAL/GEOS/PROJ come from Ubuntu itself (26.04 ships GDAL 3.12), so there is no
+# multi-stage copy from the OSGeo image any more. That copy was dead weight: r2u
+# installs prebuilt r-cran-sf/terra linked against the distro libgdal, and the
+# Python wheels vendor their own GDAL, so nothing ever loaded the copied library.
+# Note Ubuntu does not build GDAL's Arrow/Parquet drivers; use the arrow/geoarrow
+# R packages or pyarrow/geopandas for GeoParquet.
+# libgdal-dev supplies gdal-config, needed by any Python spatial package that
+# has no wheel for the base image's Python and must build from its sdist
+# (fiona, currently). Those then link this same system GDAL.
+# Do NOT delete /var/lib/apt/lists here: bspm shells out to apt to install the
+# r-cran-* binaries, and with the lists emptied it cannot find them and silently
+# falls back to compiling every R package from source.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopenjp2-7 libcairo2 \
-    libpng16-16t64 libjpeg-turbo8 libgif7 liblzma5 \
-    libxml2 libexpat1 libxerces-c3.2 \
-    libnetcdf-c++4-1 libpoppler134 libspatialite8 \
-    libhdf4-0-alt libhdf5-103-1t64 libfreexl1 unixodbc libwebp7 \
-    liblcms2-2 libpcre3 libfyba0 \
-    libkmlbase1 libkmldom1 libkmlengine1 \
-    libmysqlclient21 libcfitsio10t64 libzstd1 libpq5 \
-    libarmadillo12 libopenexr-3-1-30 libheif1 libavif16 \
-    libdeflate0 libblosc1 liblz4-1 libbrotli1 \
-    libarchive13t64 libcrypto++8t64 libjxl0.7 liblerc4 \
-    libsz2 librasterlite2-1 \
-    && ldconfig \
-    && rm -rf /var/lib/apt/lists/*
+    gdal-bin \
+    libgdal-dev
 
-# GDAL environment
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
-ENV GDAL_DATA=/usr/local/share/gdal
-ENV PROJ_DATA=/usr/local/share/proj
 
 ## Ensure RStudio has access to environment variables
 RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/set_renviron.sh | bash
@@ -110,5 +44,3 @@ RUN uv pip install --verbose --no-cache-dir \
 COPY requirements-cpu.txt requirements.txt
 RUN uv pip install --verbose --no-cache-dir -r requirements.txt && \
     rm requirements.txt
-
-

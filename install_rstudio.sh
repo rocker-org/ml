@@ -35,11 +35,11 @@ fi
 
 # RStudio Server .deb builds are only published for a limited set of Ubuntu
 # codenames, so map the ones we run on to the nearest available build:
-#   - noble (24.04) has no dedicated server build yet -> use jammy
+#   - resolute (26.04) and noble (24.04) have no dedicated server build -> use jammy
 #   - focal (20.04) -> use jammy
 #   - arm64 is only published for jammy
 case "$UBUNTU_CODENAME" in
-    noble | focal) UBUNTU_CODENAME="jammy" ;;
+    resolute | noble | focal) UBUNTU_CODENAME="jammy" ;;
 esac
 if [ "$ARCH" = "arm64" ] && [ "$UBUNTU_CODENAME" != "jammy" ]; then
     UBUNTU_CODENAME="jammy"

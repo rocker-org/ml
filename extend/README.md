@@ -9,15 +9,18 @@ This folder contains the spatial extension images (`rocker/cuda-spatial` and `ro
 
 ## Key Features
 
-### GDAL with Arrow/Parquet Support
+### GDAL
 
-These images use a **multi-stage build** to include GDAL 3.10 with full Arrow/Parquet/GeoParquet support:
+These images use the GDAL that ships with the Ubuntu base (GDAL 3.12 on Ubuntu
+26.04). R's `sf`/`terra` come from r2u as prebuilt binaries linked against that
+same system library, so there is a single, consistent GDAL throughout.
 
-- **GeoParquet** - Read/write GeoParquet files directly with GDAL
-- **Arrow** - Apache Arrow integration for high-performance data exchange
-- **Parquet** - Native Parquet format support in GDAL
+Ubuntu does not enable GDAL's Arrow/Parquet drivers, so `.parquet` is not
+readable through `ogr2ogr`/`st_read()`. For GeoParquet use the `arrow` and
+`geoarrow` R packages, or `geopandas`/`pyarrow` in Python.
 
-The GDAL libraries are copied from the official `ghcr.io/osgeo/gdal:ubuntu-full` image, which is built with all drivers enabled including Arrow/Parquet support that Ubuntu's default GDAL package lacks.
+Note that the Python geospatial wheels (`rasterio`, `fiona`, `pyogrio`) each
+vendor their own copy of GDAL and do not use the system library.
 
 ### Included Packages
 

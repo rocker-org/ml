@@ -5,6 +5,8 @@ install.packages(c(
 'rstac',
 'terra',
 'mapgl',
-'gifski'))
+'gifski',
+'arrow',
+'geoarrow'))
 
 

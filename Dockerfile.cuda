@@ -1,5 +1,5 @@
 # Use CUDA 13 runtime image (includes NVRTC for Numba, lighter than devel)
-FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04
+FROM nvidia/cuda:13.3.1-runtime-ubuntu26.04
 
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
@@ -33,7 +33,7 @@ USER root
 RUN groupmod -n ${NB_USER} ubuntu && \
     usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu
 
-# Install Python 3.12 (default in Ubuntu 24.04) and system dependencies
+# Install Python 3.14 (default in Ubuntu 26.04) and system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-venv \
