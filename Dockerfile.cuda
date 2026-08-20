@@ -63,14 +63,16 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh && \
     rm -rf .cache /tmp/* /var/tmp/* 
 
 # apt utilities, code-server setup
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash
+COPY install_utilities.sh install_utilities.sh
+RUN bash install_utilities.sh
 
 ## Grant user sudoer privileges
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
 # Install R
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile -o /usr/lib/R/etc/Rprofile.site
+COPY install_r.sh install_r.sh
+RUN bash install_r.sh
+COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
 # RStudio
 COPY install_rstudio.sh install_rstudio.sh
