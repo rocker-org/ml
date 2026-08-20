@@ -8,7 +8,12 @@ cudf-cu13>=26.4
 
 # PyTorch with CUDA 13 (from PyTorch index)
 --extra-index-url=https://download.pytorch.org/whl/cu130
-torch
+# The floor is load-bearing, not a version preference. Resolving the full file
+# without it, pip backtracks to torch 2.9.1 -- a CUDA 12.8 build -- even though
+# a consistent CUDA 13 solution exists. That pulls a second, complete CUDA 12
+# userspace (nvidia-*-cu12) in alongside RAPIDS' CUDA 13 one, several GB of
+# duplication in an image whose whole point is a single CUDA stack.
+torch>=2.13
 torchvision
 torchaudio
 
