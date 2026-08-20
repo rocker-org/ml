@@ -33,17 +33,13 @@ if [ "$RSTUDIO_VERSION" = "latest" ]; then
     RSTUDIO_VERSION="stable"
 fi
 
-# RStudio Server .deb builds are only published for a limited set of Ubuntu
-# codenames, so map the ones we run on to the nearest available build:
-#   - noble (24.04) has no dedicated server build yet -> use jammy
-#   - focal (20.04) -> use jammy
-#   - arm64 is only published for jammy
-case "$UBUNTU_CODENAME" in
-    noble | focal) UBUNTU_CODENAME="jammy" ;;
-esac
-if [ "$ARCH" = "arm64" ] && [ "$UBUNTU_CODENAME" != "jammy" ]; then
-    UBUNTU_CODENAME="jammy"
-fi
+# jammy is the only Ubuntu server path Posit publishes, for both arches. That
+# deb is genuinely built on jammy (max required symbols GLIBC_2.34 /
+# GLIBCXX_3.4.29) and its Depends are codename-agnostic, so it is the manylinux
+# pattern -- build old, run anywhere forward -- rather than a stale URL. Take it
+# unconditionally: allow-listing the codenames we know about means every future
+# release 404s until someone adds it. See rocker-org/ml#50.
+UBUNTU_CODENAME="jammy"
 
 # Resolve the "stable" keyword to a concrete version number.
 #

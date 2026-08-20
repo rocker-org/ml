@@ -20,7 +20,9 @@ on:
 env:
   GHCR_IMAGE: ghcr.io/rocker-org/cuda
   DOCKER_IMAGE: rocker/cuda
-  TAGS: latest cuda13.0-py3.12-rapids25.12 cuda13.0-py3.12 cuda13.0
+  # No rapids<version> tag: cudf now floats (>=26.4) rather than being pinned to a
+  # release series, so such a tag would go stale on the next rebuild.
+  TAGS: latest cuda13.3-py3.14 cuda13.3
 
 jobs:
   build:
