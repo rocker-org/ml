@@ -1,5 +1,5 @@
 # Use CUDA 13 runtime image (includes NVRTC for Numba, lighter than devel)
-FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04
+FROM nvidia/cuda:13.3.1-runtime-ubuntu26.04
 
 ENV SHELL=/bin/bash
 # Don't buffer Python stdout/stderr output
@@ -33,7 +33,7 @@ USER root
 RUN groupmod -n ${NB_USER} ubuntu && \
     usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu
 
-# Install Python 3.12 (default in Ubuntu 24.04) and system dependencies
+# Install Python 3.14 (default in Ubuntu 26.04) and system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-venv \
@@ -63,14 +63,16 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh && \
     rm -rf .cache /tmp/* /var/tmp/* 
 
 # apt utilities, code-server setup
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_utilities.sh | bash
+COPY install_utilities.sh install_utilities.sh
+RUN bash install_utilities.sh
 
 ## Grant user sudoer privileges
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
 # Install R
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/install_r.sh | bash
-RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/Rprofile -o /usr/lib/R/etc/Rprofile.site
+COPY install_r.sh install_r.sh
+RUN bash install_r.sh
+COPY Rprofile /usr/lib/R/etc/Rprofile.site
 
 # RStudio
 COPY install_rstudio.sh install_rstudio.sh

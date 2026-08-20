@@ -20,7 +20,7 @@ on:
 env:
   GHCR_IMAGE: ghcr.io/rocker-org/ml
   DOCKER_IMAGE: rocker/ml
-  TAGS: latest py3.12
+  TAGS: latest py3.14
 
 jobs:
   build:
