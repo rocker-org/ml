@@ -1,0 +1,34 @@
+# Make `sudo` behave sensibly in an image whose Python lives in a venv.
+#
+# Two separate problems are addressed here.
+#
+# 1. secure_path (long-standing, not new to 26.04)
+#
+#    Ubuntu's /etc/sudoers sets a secure_path that does not include
+#    ${VIRTUAL_ENV}/bin, and sudo resolves the command with secure_path rather
+#    than the caller's PATH. So for a user in this image:
+#
+#      sudo pip install X    -> silently runs /usr/lib/python3/dist-packages/pip
+#                               and installs into the SYSTEM python, not /opt/venv
+#      sudo python3 ...      -> /usr/bin/python3, not the venv interpreter
+#      sudo jupyter ...      -> "command not found"
+#
+#    The first is the dangerous one: it does not fail, it quietly targets the
+#    wrong interpreter, so packages appear to install and then are missing.
+#
+# 2. --preserve-env (new in Ubuntu 26.04)
+#
+#    26.04 makes sudo-rs the default /usr/bin/sudo via update-alternatives.
+#    sudo-rs does not implement --preserve-env: it warns and ignores the flag.
+#    Anything that drops root -> ${NB_USER} with `sudo --preserve-env` therefore
+#    loses the environment. In this stack XDG_CONFIG_HOME and CODE_EXTENSIONSDIR
+#    are load-bearing -- they are what keep app config and code-server
+#    extensions outside the JupyterHub $HOME mount -- so losing them silently
+#    relocates both into $HOME. sudo-rs does honour env_keep, so the variables
+#    are listed explicitly instead of replacing Ubuntu's default sudo.
+#
+# The zz- filename prefix matters: sudoers.d is read in lexical order and later
+# Defaults win, so this must sort after any other drop-in that sets secure_path.
+# jupyter/docker-stacks' start.sh, for example, generates /etc/sudoers.d/path.
+Defaults secure_path="/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Defaults env_keep += "VIRTUAL_ENV NB_USER NB_UID NB_GID CODE_EXTENSIONSDIR XDG_CONFIG_HOME LD_LIBRARY_PATH PYTHONPATH"
