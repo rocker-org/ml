@@ -1,5 +1,5 @@
 # Geospatial and data science extensions for CPU image
-# Note: GDAL with Arrow/Parquet support is installed from system via multi-stage build
+# Note: GDAL comes from the Ubuntu base; see extend/README.md
 
 # Cloud and storage
 boto3
