@@ -1,91 +1,68 @@
 ARG BASE=rocker/ml
-ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-full-3.10.3
 
-# Stage 1: Get GDAL binaries with Arrow/Parquet support from official image
-FROM ${GDAL_IMAGE} AS gdal-builder
-# The upstream GDAL image ships an Apache Arrow apt source whose signing key has
-# rotated, breaking `apt-get update`. Arrow libs are already baked into the image
-# and we only need libgeos-dev (from Ubuntu's own repos), so drop the stale source.
-RUN rm -f /etc/apt/sources.list.d/apache-arrow.sources && \
-    apt-get update && apt-get install -y libgeos-dev
+# Stage 1: build GDAL's Arrow/Parquet drivers as plugins.
+#
+# Ubuntu ships GDAL without these drivers -- libarrow-dev is not in GDAL's
+# Build-Depends, so cmake never finds Arrow and the code is simply absent from
+# libgdal. Upstream builds them as dlopen'd plugins precisely so they can be
+# added without touching libgdal, which is what we do here: compile the two
+# driver targets against the *distro's* GDAL and Arrow, keep the two .so files,
+# throw the rest of the build away.
+#
+# Building from $BASE rather than a bare ubuntu image is deliberate: it
+# guarantees the same apt sources, so the plugin is compiled against exactly the
+# libgdal and libarrow the final image will load it into. Plugin and host must
+# agree on both ABIs.
+FROM $BASE AS plugin-builder
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build ca-certificates curl \
+    libgdal-dev libarrow-dev libparquet-dev libarrow-dataset-dev libarrow-acero-dev
+WORKDIR /src
+RUN GDAL_VER="$(gdal-config --version)" && \
+    echo "Building Arrow/Parquet plugins for GDAL ${GDAL_VER}" && \
+    curl -sL "https://github.com/OSGeo/gdal/releases/download/v${GDAL_VER}/gdal-${GDAL_VER}.tar.gz" \
+      | tar xz && \
+    mv "gdal-${GDAL_VER}" gdal && \
+    cmake -S gdal -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_APPS=OFF -DBUILD_TESTING=OFF \
+      -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JAVA_BINDINGS=OFF -DBUILD_CSHARP_BINDINGS=OFF \
+      -DGDAL_BUILD_OPTIONAL_DRIVERS=OFF -DOGR_BUILD_OPTIONAL_DRIVERS=OFF \
+      -DGDAL_USE_ARROW=ON -DGDAL_USE_PARQUET=ON -DGDAL_USE_ARROWDATASET=ON \
+      -DOGR_ENABLE_DRIVER_ARROW=ON -DOGR_ENABLE_DRIVER_ARROW_PLUGIN=ON \
+      -DOGR_ENABLE_DRIVER_PARQUET=ON -DOGR_ENABLE_DRIVER_PARQUET_PLUGIN=ON && \
+    cmake --build build --target ogr_Parquet ogr_Arrow -j"$(nproc)" && \
+    mkdir /plugins && cp build/gdalplugins/ogr_Parquet.so build/gdalplugins/ogr_Arrow.so /plugins/
 
-# Detect architecture and set allow-list path
-RUN export ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        export ARCH_TRIPLET="x86_64-linux-gnu"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-        export ARCH_TRIPLET="aarch64-linux-gnu"; \
-    else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    mkdir -p /opt/rootfs/usr/bin && \
-    mkdir -p /opt/rootfs/usr/include && \
-    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET} && \
-    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig && \
-    mkdir -p /opt/rootfs/usr/lib/${ARCH_TRIPLET}/cmake && \
-    mkdir -p /opt/rootfs/usr/local && \
-    cp -r /usr/local/* /opt/rootfs/usr/local/ && \
-    \
-    cp /usr/bin/gdal-config /opt/rootfs/usr/bin/ && \
-    cp /usr/bin/geos-config /opt/rootfs/usr/bin/ && \
-    cp -r /usr/include/* /opt/rootfs/usr/include/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libgdal* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libproj* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libgeos* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libarrow* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libparquet* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libjxl* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp /usr/lib/${ARCH_TRIPLET}/libQB3* /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    cp -r /usr/lib/${ARCH_TRIPLET}/cmake /opt/rootfs/usr/lib/${ARCH_TRIPLET}/ && \
-    \
-    # Copy pkgconfig files
-    cp /usr/lib/${ARCH_TRIPLET}/pkgconfig/gdal.pc /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig/ && \
-    cp /usr/local/lib/pkgconfig/proj.pc /opt/rootfs/usr/lib/${ARCH_TRIPLET}/pkgconfig/
-
-# Stage 2: Build our spatial image
-FROM $BASE 
+# Stage 2: the spatial image
+FROM $BASE
 
 USER root
 
-# Copy all staged files from the builder
-COPY --from=gdal-builder /opt/rootfs /
-
-# Set up environment variables
-# We use a trick to dynamically set PKG_CONFIG_PATH based on available directories
-RUN if [ -d "/usr/lib/aarch64-linux-gnu" ]; then \
-        echo "Detected aarch64"; \
-        echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig" >> /etc/environment; \
-    else \
-        echo "Detected x86_64"; \
-        echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig" >> /etc/environment; \
-    fi
-
-ENV PATH="/usr/local/bin:$PATH"
-ENV GDAL_CONFIG=/usr/bin/gdal-config
-# Set a default for build time, though /etc/environment handles runtime
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
-
-# Install runtime dependencies for GDAL
+# GDAL/GEOS/PROJ come from Ubuntu itself (26.04 ships GDAL 3.12). The -dev
+# packages are needed because the Python spatial packages below are built from
+# source against them.
+# Do NOT delete /var/lib/apt/lists here: bspm shells out to apt to install the
+# r-cran-* binaries, and with the lists emptied it cannot find them and silently
+# falls back to compiling every R package from source.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopenjp2-7 libcairo2 \
-    libpng16-16t64 libjpeg-turbo8 libgif7 liblzma5 \
-    libxml2 libexpat1 libxerces-c3.2 \
-    libnetcdf-c++4-1 libpoppler134 libspatialite8 \
-    libhdf4-0-alt libhdf5-103-1t64 libfreexl1 unixodbc libwebp7 \
-    liblcms2-2 libpcre3 libfyba0 \
-    libkmlbase1 libkmldom1 libkmlengine1 \
-    libmysqlclient21 libcfitsio10t64 libzstd1 libpq5 \
-    libarmadillo12 libopenexr-3-1-30 libheif1 libavif16 \
-    libdeflate0 libblosc1 liblz4-1 libbrotli1 \
-    libarchive13t64 libcrypto++8t64 libjxl0.7 liblerc4 \
-    libsz2 librasterlite2-1 \
-    && ldconfig \
-    && rm -rf /var/lib/apt/lists/*
+    gdal-bin \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    proj-bin \
+    libarrow2300 libparquet2300 libarrow-dataset2300 libarrow-acero2300
 
-# GDAL environment
+COPY --from=plugin-builder /plugins /tmp/plugins
+RUN PLUGDIR="/usr/lib/$(gcc -print-multiarch)/gdalplugins" && \
+    mkdir -p "$PLUGDIR" && mv /tmp/plugins/*.so "$PLUGDIR/" && rmdir /tmp/plugins && \
+    ogrinfo --formats | grep -q '^  Parquet ' || \
+      { echo "ERROR: Parquet driver did not load -- plugin/libgdal ABI mismatch?"; exit 1; }
+
 ENV CPL_VSIL_USE_TEMP_FILE_FOR_RANDOM_WRITE=YES
-ENV GDAL_DATA=/usr/local/share/gdal
-ENV PROJ_DATA=/usr/local/share/proj
+# pyproj's sdist looks for the proj executable and headers under PROJ_DIR
+ENV PROJ_DIR=/usr
 
 ## Ensure RStudio has access to environment variables
 RUN curl -s https://raw.githubusercontent.com/rocker-org/ml/refs/heads/master/set_renviron.sh | bash
@@ -96,8 +73,16 @@ USER ${NB_USER}
 COPY install.r install.r
 RUN Rscript install.r
 
+# Build the GEOS/PROJ/GDAL-linked packages from source against the system
+# libraries rather than taking wheels that vendor their own copies. Otherwise
+# the image carries several GDALs, which one you get depends on whether a wheel
+# happens to exist for this Python, and the vendored copies cannot see the
+# Parquet plugin installed above.
+ENV SPATIAL_NO_BINARY="--no-binary rasterio --no-binary fiona --no-binary pyogrio \
+--no-binary pyproj --no-binary shapely"
+
 # Pre-install core spatial packages to avoid complex resolution backtracking
-RUN uv pip install --verbose --no-cache-dir \
+RUN uv pip install --verbose --no-cache-dir ${SPATIAL_NO_BINARY} \
     numpy \
     "cligj>=0.5" \
     "click-plugins>=1.0" \
@@ -108,7 +93,13 @@ RUN uv pip install --verbose --no-cache-dir \
 
 ## Python extensions
 COPY requirements-cpu.txt requirements.txt
-RUN uv pip install --verbose --no-cache-dir -r requirements.txt && \
+RUN uv pip install --verbose --no-cache-dir ${SPATIAL_NO_BINARY} -r requirements.txt && \
     rm requirements.txt
 
-
+# Fail the build if anything silently reverted to a vendored GDAL
+RUN python -c "\
+import rasterio, fiona, pyogrio, subprocess, sys;\
+sysgdal = subprocess.run(['gdal-config','--version'], capture_output=True, text=True).stdout.strip();\
+seen = {'rasterio': rasterio.__gdal_version__, 'fiona': fiona.__gdal_version__, 'pyogrio': pyogrio.__gdal_version_string__};\
+bad = {k: v for k, v in seen.items() if v != sysgdal};\
+sys.exit('ERROR: not linked against system GDAL %s: %s' % (sysgdal, bad)) if bad else print('all Python bindings on system GDAL', sysgdal)"
