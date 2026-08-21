@@ -69,6 +69,12 @@ RUN bash install_utilities.sh
 ## Grant user sudoer privileges
 RUN adduser "$NB_USER" sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
 
+# Put ${VIRTUAL_ENV}/bin on sudo's secure_path and keep the venv/Jupyter env
+# vars across a privilege drop. Without this `sudo pip` silently installs into
+# the system python and `sudo jupyter` is not found; see sudoers-venv.
+COPY sudoers-venv /etc/sudoers.d/zz-venv
+RUN chmod 0440 /etc/sudoers.d/zz-venv && visudo -c -f /etc/sudoers.d/zz-venv
+
 # Install R
 COPY install_r.sh install_r.sh
 RUN bash install_r.sh

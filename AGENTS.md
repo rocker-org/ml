@@ -18,6 +18,20 @@ A simple `CMD ["jupyter", "lab", ...]` is acceptable as a local-testing fallback
 Do not use CMD to run setup scripts that copy configs or seed state at container start.
 JupyterHub overrides CMD, so such scripts will never run in production.
 
+### sudo, secure_path and Ubuntu 26.04's sudo-rs
+`sudo` resolves commands with `secure_path` from `/etc/sudoers`, not the caller's PATH,
+and Ubuntu's default does not include `${VIRTUAL_ENV}/bin`. Left alone, `sudo pip install`
+silently installs into the **system** python instead of `/opt/venv`, and `sudo jupyter`
+is not found. Fixed by `sudoers-venv`, installed as `/etc/sudoers.d/zz-venv`.
+
+Ubuntu 26.04 also makes **sudo-rs** the default `/usr/bin/sudo` (GNU sudo remains at
+`/usr/bin/sudo.ws`). sudo-rs does **not** implement `--preserve-env` -- it warns and
+ignores it -- so do not rely on that flag to carry the environment across a privilege
+drop. Use `Defaults env_keep`, which sudo-rs does honour.
+
+The `zz-` prefix is deliberate: `sudoers.d` is read in lexical order and later `Defaults`
+win, so anything setting `secure_path` must sort last.
+
 ## Persistent Storage Pattern
 
 All persistent, image-baked configuration must live outside `$HOME`.
