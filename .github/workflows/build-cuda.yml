@@ -12,6 +12,7 @@ on:
       - Rprofile
       - vscode-extensions.txt
       - requirements.cuda.txt
+      - sudoers-venv
       - .github/workflows/build-cuda.yml
 
 # Build each architecture on its own native runner (arm64 on ubuntu-24.04-arm,
