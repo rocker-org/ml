@@ -48,7 +48,16 @@ RUN apt-get update && apt-get install -y \
 #   pip installs run as jovyan can freely update any package.
 # - chown in a SEPARATE RUN layer would duplicate every venv file, doubling image size.
 COPY requirements-cpu.txt /tmp/requirements.txt
-RUN python3 -m venv $VIRTUAL_ENV && \
+# --copies is deliberate: without it VS Code / code-server cannot see this venv.
+# A default (symlinked) venv makes bin/python a symlink chain ending at
+# /usr/bin/pythonX.Y -- the *same* real path as the system interpreter. The Python
+# extension's PATH locator canonicalises candidates and dedupes by resolved path,
+# so the venv collapses into the system python and silently disappears from the
+# interpreter and notebook-kernel pickers, even though it is first on PATH and
+# $VIRTUAL_ENV points at it. --copies gives the venv a real interpreter binary of
+# its own, so it keeps a distinct identity and is discovered normally.
+# Costs ~20MB (three copies of the ~7MB binary) against a multi-GB image.
+RUN python3 -m venv --copies $VIRTUAL_ENV && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     chown -R $NB_USER:$NB_USER $VIRTUAL_ENV
