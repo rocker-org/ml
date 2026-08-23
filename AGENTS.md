@@ -32,6 +32,54 @@ drop. Use `Defaults env_keep`, which sudo-rs does honour.
 The `zz-` prefix is deliberate: `sudoers.d` is read in lexical order and later `Defaults`
 win, so anything setting `secure_path` must sort last.
 
+## The venv must be built with `--copies`
+
+`/opt/venv` is created with `python3 -m venv --copies`. **Do not drop `--copies`.**
+
+A default venv symlinks `bin/python -> bin/python3 -> /usr/bin/pythonX.Y`, so its
+`realpath` is the *system* interpreter. The VS Code Python extension's PATH locator
+canonicalises every candidate and dedupes by resolved path, so the venv resolves to
+the same file as `/usr/bin/python3` and is silently discarded. The symptom is that
+`/opt/venv` never appears in the interpreter picker or the notebook kernel picker --
+only `/bin/python3` and `/usr/bin/python3` -- even though `/opt/venv/bin` is first on
+`PATH` and `$VIRTUAL_ENV` points at it. The extension log shows the collapse:
+
+```
+Found: /opt/venv/bin/python --> /usr/bin/python3.14   # seen, then deduped away
+> /bin/python3      ... interpreterInfo.py            # only these two survive
+> /usr/bin/python3  ... interpreterInfo.py
+```
+
+Being on `PATH` is the one way of being found that does *not* survive this, because
+the PATH locator is the only one that dedupes. The venv locators (which key off
+`pyvenv.cfg` and would preserve its identity) never see `/opt/venv`, since it is in
+none of the directories they scan (`~/.virtualenvs`, `$WORKON_HOME`, `python.venvPath`,
+or the workspace).
+
+`--copies` gives the venv its own real interpreter binary, so its `realpath` stays
+inside `/opt/venv` and it keeps a distinct identity. Cost is ~20MB.
+
+A `python.venvPath` setting also works around this, but it would have to be seeded
+into each user's `settings.json` at runtime (it cannot be baked into `$HOME`);
+`--copies` fixes it at the source and needs no settings at all.
+
+### Open VSX ships the pet-less build of ms-python
+
+Related, and worth knowing before debugging this area: `code-server --install-extension
+ms-python.python` resolves against **Open VSX**, which only ever serves the `universal`
+VSIX. That build omits the `pet` native locator binary (`python-env-tools/bin/pet`) that
+Microsoft bundles in the per-platform VSIXs. `ms-python.vscode-python-envs` -- pulled in
+automatically as an `extensionPack` member -- shells out to `pet` for all discovery, so
+it fails with `ENOENT` and reports zero environments, leaving its "Python Environments"
+UI offering only *Create Environment*.
+
+This is mostly cosmetic today: `python.useEnvironmentsExtension` defaults to `false`, so
+`ms-python.python`'s own legacy locator (which needs no `pet`) is authoritative, and that
+is also what `ms-toolsai.jupyter` consumes for notebook kernels. The `pet` binary is not
+separately distributed -- `microsoft/python-environment-tools` publishes no release
+assets -- so the only source is the Microsoft marketplace, whose terms target VS Code
+proper. Hence: not vendored here.
+
 ## Persistent Storage Pattern
 
 All persistent, image-baked configuration must live outside `$HOME`.
