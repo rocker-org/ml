@@ -115,7 +115,9 @@ Additional utilities and VSCode extensions are installed in `/opt/share` (via `X
 **Roo Cline** is configured automatically at Jupyter server start via a startup hook that reads `OPENAI_API_KEY` from the environment.
 
 **Posit Assistant** (the AI pane in RStudio) is baked into the image at `/etc/rstudio/pai/bin`,
-so users are not prompted to download it on first use. It is pointed at NRP via
+so users are not prompted to download it on first use (the Jupyter startup hook points
+`RSTUDIO_POSIT_AI_PATH` at it, since jupyter-rsession-proxy's `RSTUDIO_CONFIG_DIR` would
+otherwise send RStudio's search to a temp directory). It is pointed at NRP via
 `OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` (derived from `OPENAI_API_KEY`)
 in the same startup hook, and the model is seeded into `~/.posit/assistant/settings.json`
 on first launch — edit that file, or use the assistant's own settings UI, to change models

@@ -88,9 +88,17 @@ Install location is `/etc/rstudio/pai/bin`, the system-wide path RStudio searche
 2. `~/.local/share/rstudio/pai/bin`
 3. `/etc/rstudio/pai/bin`  ← we use this
 
-Deliberately *not* `RSTUDIO_POSIT_AI_PATH`: that would shadow (2), so a user who lets
-RStudio update the assistant would keep getting the image-baked copy. With (3), an updated
-copy in the persistent HOME wins.
+(3) alone is **not** enough under JupyterHub. `systemConfigDir()` is only `/etc/rstudio`
+when nothing overrides it, and `jupyter-rsession-proxy` sets `RSTUDIO_CONFIG_DIR` to a fresh
+`tempfile.mkdtemp()` for every `rserver` it spawns (`jupyter_rsession_proxy/__init__.py`).
+That variable short-circuits the entire XDG lookup, so RStudio searches `<tmpdir>/pai/bin`,
+finds nothing, and offers to download the assistant — exactly as if it were not installed.
+(The same code path is behind the `session-rpc-key` removal in `install_rstudio.sh`.)
+
+So the startup hook sets `RSTUDIO_POSIT_AI_PATH` (1) to the system path, but only when the
+user has no copy of their own in (2) — otherwise the env var would shadow an in-IDE update.
+The bundle still lives at (3) so a plain `rserver`, launched without the proxy, finds it
+with no environment help.
 
 Runtime config comes from `_setup_posit_assistant()` in the Jupyter startup hook. The
 assistant reads `OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` for its

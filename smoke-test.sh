@@ -42,6 +42,36 @@ check "posit assistant bundle" "
     test -f /etc/rstudio/pai/bin/package.json"
 check "posit assistant readable by user" "head -c1 /etc/rstudio/pai/bin/dist/server/main.js >/dev/null"
 
+# The bundle being on disk is not enough: RStudio has to resolve it. Emulate
+# locatePositAssistantInstallation() under the environment jupyter-rsession-proxy
+# actually gives rserver -- it sets RSTUDIO_CONFIG_DIR to a fresh mkdtemp(),
+# which short-circuits the /etc/rstudio lookup. This is the check that would
+# have caught the assistant silently not being found on JupyterHub.
+check "posit assistant resolves under rsession-proxy env" "
+    export RSTUDIO_CONFIG_DIR=\\$(mktemp -d)
+    python3 - <<'EOF'
+import os, pathlib, runpy, sys
+runpy.run_path('/etc/jupyter/jupyter_server_config.py')
+
+def valid(p):
+    p = pathlib.Path(p)
+    return ((p / 'dist/server/main.js').exists()
+            and (p / 'dist/client/index.html').exists())
+
+# RStudio's search order, in order.
+candidates = []
+if os.environ.get('RSTUDIO_POSIT_AI_PATH'):
+    candidates.append(os.environ['RSTUDIO_POSIT_AI_PATH'])
+candidates.append(str(pathlib.Path.home() / '.local/share/rstudio/pai/bin'))
+# systemConfigDir(): RSTUDIO_CONFIG_DIR short-circuits it, else XDG_CONFIG_DIRS, else /etc.
+sysdir = os.environ.get('RSTUDIO_CONFIG_DIR')
+candidates.append(f'{sysdir}/pai/bin' if sysdir else '/etc/rstudio/pai/bin')
+
+found = next((c for c in candidates if valid(c)), None)
+assert found, f'RStudio would find no assistant install; searched {candidates}'
+print('resolves to', found, file=sys.stderr)
+EOF"
+
 # Execute the Jupyter startup hook the way the server would, then assert it
 # produced the per-user config and the provider environment.
 check "startup hook configures AI tools" "

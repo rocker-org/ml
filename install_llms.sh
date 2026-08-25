@@ -119,6 +119,20 @@ def _setup_posit_assistant():
     if api_key:
         os.environ.setdefault("OPENAI_COMPATIBLE_API_KEY", api_key)
 
+    # RStudio finds the image-baked bundle at /etc/rstudio/pai/bin only when it
+    # resolves systemConfigDir() to /etc/rstudio. jupyter-rsession-proxy sets
+    # RSTUDIO_CONFIG_DIR to a fresh mkdtemp() for every rserver it spawns, and
+    # that variable short-circuits the whole XDG lookup -- so RStudio searches
+    # <tmpdir>/pai/bin, finds nothing, and offers to download the assistant.
+    # Point RSTUDIO_POSIT_AI_PATH (the first entry in RStudio's search order) at
+    # the real location instead. Skipped when the user already has their own copy
+    # in the persistent HOME, so an in-IDE update still wins over the baked one.
+    system_install = pathlib.Path("/etc/rstudio/pai/bin")
+    user_install = pathlib.Path.home() / ".local/share/rstudio/pai/bin"
+    if not (user_install / "dist/server/main.js").exists() \
+            and (system_install / "dist/server/main.js").exists():
+        os.environ.setdefault("RSTUDIO_POSIT_AI_PATH", str(system_install))
+
     # Model choice is not env-configurable in the shipping assistant build, so
     # seed the user's settings file on first launch (same pattern as opencode).
     # It lives in the persistent HOME, so later edits in the UI stick; delete it
