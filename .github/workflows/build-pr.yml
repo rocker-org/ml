@@ -1,0 +1,126 @@
+name: Build PR image (test)
+
+# Build the base images from a pull request and publish them under a
+# throwaway `pr-<number>` tag, so a change can be pulled and poked at by hand
+# before it is merged. The release workflows (build-ml.yml / build-cuda.yml)
+# only run on push to master, which means without this the first real build of
+# a change is also the build that overwrites `:latest`.
+#
+# Differences from the release workflows, all deliberate:
+#   - amd64 only. This is a test artifact, not a release; arm64 doubles the
+#     cost for something that gets deleted in a week.
+#   - GHCR only. Docker Hub is the user-facing registry and needs org secrets
+#     that forks cannot read; GITHUB_TOKEN is enough for GHCR.
+#   - Tags `pr-<number>`, never `latest`. Nothing here can shadow a release.
+#
+# These tags are not garbage-collected. Prune them occasionally from
+# https://github.com/orgs/rocker-org/packages (Package settings -> versions).
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which image to build
+        type: choice
+        options: [both, cpu, cuda]
+        default: both
+  pull_request:
+    paths:
+      - Dockerfile.cpu
+      - Dockerfile.cuda
+      - install*.sh
+      - Rprofile
+      - smoke-test.sh
+      - vscode-extensions.txt
+      - requirements-cpu.txt
+      - requirements.cuda.txt
+      - sudoers-venv
+      - .github/workflows/build-pr.yml
+
+concurrency:
+  # One in-flight build per PR; a new push supersedes the previous build.
+  group: build-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.image }} (amd64)
+    # Fork PRs cannot push to the org's registry (GITHUB_TOKEN is read-only
+    # for them). Skip rather than fail with a confusing 403.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # `matrix` is not available to a job-level `if`, so the workflow_dispatch
+        # choice is applied by shortening the matrix itself. On pull_request the
+        # `inputs` context is empty and both images build.
+        image: ${{ fromJSON(inputs.target == 'cpu' && '["cpu"]' || inputs.target == 'cuda' && '["cuda"]' || '["cpu","cuda"]') }}
+    steps:
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h
+
+      - uses: actions/checkout@v5
+
+      - name: Resolve image parameters
+        id: img
+        run: |
+          case "${{ matrix.image }}" in
+            cpu)  echo "dockerfile=Dockerfile.cpu"  >> "$GITHUB_OUTPUT"
+                  echo "repo=ghcr.io/rocker-org/ml" >> "$GITHUB_OUTPUT" ;;
+            cuda) echo "dockerfile=Dockerfile.cuda"   >> "$GITHUB_OUTPUT"
+                  echo "repo=ghcr.io/rocker-org/cuda" >> "$GITHUB_OUTPUT" ;;
+          esac
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            tag="pr-${{ github.event.pull_request.number }}"
+          else
+            # Manual run off a branch: sanitize the ref into a valid tag.
+            tag="dev-$(echo '${{ github.ref_name }}' | tr -c 'a-zA-Z0-9._-' '-')"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ steps.img.outputs.dockerfile }}
+          platforms: linux/amd64
+          build-args: |
+            NB_USER=jovyan
+          tags: ${{ steps.img.outputs.repo }}:${{ steps.img.outputs.tag }}
+          push: true
+
+      # Cheap assertions that the image is actually usable, so an obviously
+      # broken build fails here instead of during hand-testing.
+      - name: Smoke test
+        run: bash smoke-test.sh "${{ steps.img.outputs.repo }}:${{ steps.img.outputs.tag }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          ref="${{ steps.img.outputs.repo }}:${{ steps.img.outputs.tag }}"
+          {
+            echo "### \`${{ matrix.image }}\` test image"
+            echo
+            echo '```'
+            echo "docker pull ${ref}"
+            echo "docker run --rm -p 8888:8888 -e OPENAI_API_KEY=\$OPENAI_API_KEY ${ref}"
+            echo '```'
+            echo
+            echo "Then open <http://localhost:8888>, launch RStudio, and check the Posit Assistant pane."
+          } >> "$GITHUB_STEP_SUMMARY"

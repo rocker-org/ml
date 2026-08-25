@@ -72,6 +72,42 @@ Two providers are enabled out of the box:
   `~/.local/share/opencode/auth.json` (HOME persistent volume) and survives container
   restarts. Alternatively, inject `GITHUB_TOKEN` via JupyterHub to skip interactive auth.
 
+## Posit Assistant Configuration
+
+RStudio 2026.04.0+ ships the AI pane, but not the assistant itself: on first use RStudio
+downloads a Node bundle from `cdn.posit.co` into `~/.local/share/rstudio/pai/bin`. That is
+a per-user, network-dependent step, so `install_posit_assistant.sh` bakes the bundle in at
+build time instead. Version and checksum are resolved from
+`https://cdn.posit.co/posit-ai/manifest.json` (keyed by wire-protocol version; we take the
+highest, matching the current stable RStudio) — nothing is pinned.
+
+Install location is `/etc/rstudio/pai/bin`, the system-wide path RStudio searches
+(`ChatInstallation.cpp`, `locatePositAssistantInstallation`):
+
+1. `$RSTUDIO_POSIT_AI_PATH`
+2. `~/.local/share/rstudio/pai/bin`
+3. `/etc/rstudio/pai/bin`  ← we use this
+
+Deliberately *not* `RSTUDIO_POSIT_AI_PATH`: that would shadow (2), so a user who lets
+RStudio update the assistant would keep getting the image-baked copy. With (3), an updated
+copy in the persistent HOME wins.
+
+Runtime config comes from `_setup_posit_assistant()` in the Jupyter startup hook. The
+assistant reads `OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` for its
+"OpenAI Compatible" provider, and env vars outrank both `~/.posit/ai/providers.json` and
+the settings UI. `rserver` is spawned by jupyter-rsession-proxy as a child of the Jupyter
+server, so exporting them in the hook is enough.
+
+Model choice is *not* env-configurable in the shipping build (the documented
+`POSIT_ASSISTANT_SETTINGS_DEFAULT` / `_ENFORCED` variables are not in the 1.1.0 bundle —
+only `POSIT_AI_PROVIDERS_DEFAULT` / `_ENFORCED` for `providers.json`). So the hook seeds
+`~/.posit/assistant/settings.json` on first launch, opencode-style: HOME-resident, user
+edits persist, delete and restart to re-seed.
+
+The relevant RStudio prefs (`assistant`, `chat_provider`) already default to `posit`, so no
+`/etc/rstudio/rstudio-prefs.json` entry is needed. `RSTUDIO_DISABLE_POSIT_ASSISTANT` is the
+off switch if one is ever wanted.
+
 ## Roo Cline Configuration
 
 Roo Cline stores its API provider config in VS Code **secret storage**, which falls back to
@@ -95,3 +131,21 @@ current `OPENAI_API_KEY`).
 The `~/.local/share/code-server/User/settings.json` entry persists in the user's home
 volume once written, so new users get it on first Jupyter start and it stays for subsequent
 sessions.
+
+## Testing a change before merging
+
+The release workflows (`build-ml.yml`, `build-cuda.yml`) only run on push to `master`, and
+their `merge` job writes `:latest` — so they are not a pre-merge gate. `build-pr.yml` fills
+that gap: on a pull request touching the Dockerfiles or `install*.sh` it builds amd64-only
+images and pushes them to GHCR as `ghcr.io/rocker-org/{ml,cuda}:pr-<number>`, then runs
+`smoke-test.sh` against the result. The job summary prints the `docker pull` / `docker run`
+lines for hand-testing.
+
+`smoke-test.sh` also runs locally against any tag (`bash smoke-test.sh rocker-ml:local`,
+pairing with `run.sh`). It asserts R/Python/Jupyter/RStudio/quarto/opencode are present and
+that the Jupyter startup hook actually seeds the opencode, Roo and Posit Assistant config
+when executed with an `OPENAI_API_KEY` in the environment. It does **not** cover anything
+GPU (no GPU runners) or anything that needs a browser — the IDE panes still need a human.
+
+Fork PRs are skipped: `GITHUB_TOKEN` is read-only for them, so the push would 403. PR tags
+are not garbage-collected; prune them from the org's package settings occasionally.

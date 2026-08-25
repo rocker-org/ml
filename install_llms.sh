@@ -51,7 +51,7 @@ export OPENCODE_CONFIG="${HOME}/.config/opencode/opencode.json"
 EOF
 chmod 0644 /etc/profile.d/opencode.sh
 
-# Roo Cline pre-configuration via Jupyter server startup hook.
+# Roo Cline (and Posit Assistant) pre-configuration via Jupyter server startup hook.
 # /etc/jupyter/ is in Jupyter's config search path (outside $HOME, survives JupyterHub mounts).
 # This script runs when the Jupyter server starts — before users access code-server.
 # It generates a Roo settings import file with OPENAI_API_KEY from the environment,
@@ -60,7 +60,7 @@ chmod 0644 /etc/profile.d/opencode.sh
 # and API key are configured automatically each session.
 mkdir -p /etc/jupyter
 cat > /etc/jupyter/jupyter_server_config.py <<'PYEOF'
-"""Jupyter server startup hook: seed per-user opencode config and Roo Cline settings."""
+"""Jupyter server startup hook: seed per-user opencode, Roo Cline and Posit Assistant settings."""
 import os, json, pathlib, logging, shutil
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,34 @@ def _setup_roo_cline():
     existing["roo-cline.autoImportSettingsPath"] = str(settings_file)
     cs_settings_file.write_text(json.dumps(existing, indent=2))
 
+def _setup_posit_assistant():
+    # Posit Assistant (the AI pane in RStudio) is baked into the image by
+    # install_posit_assistant.sh; this only points it at the NRP endpoint.
+    #
+    # Provider credentials come from the environment: the assistant reads
+    # OPENAI_COMPATIBLE_{BASE_URL,API_KEY} for its "OpenAI Compatible" provider,
+    # and env vars outrank both ~/.posit/ai/providers.json and the settings UI.
+    # rserver is spawned by jupyter-rsession-proxy as a child of this process,
+    # so setting them here is enough for the rsession that hosts the assistant.
+    os.environ.setdefault("OPENAI_COMPATIBLE_BASE_URL", "https://ellm.nrp-nautilus.io/v1")
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if api_key:
+        os.environ.setdefault("OPENAI_COMPATIBLE_API_KEY", api_key)
+
+    # Model choice is not env-configurable in the shipping assistant build, so
+    # seed the user's settings file on first launch (same pattern as opencode).
+    # It lives in the persistent HOME, so later edits in the UI stick; delete it
+    # and restart the container to go back to the defaults below.
+    settings_file = pathlib.Path.home() / ".posit/assistant/settings.json"
+    if not settings_file.exists():
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        settings_file.write_text(json.dumps({
+            "model": {
+                "provider": "openai-compatible",
+                "id": "qwen3"
+            }
+        }, indent=2))
+
 try:
     _setup_opencode()
 except Exception as e:
@@ -114,4 +142,9 @@ try:
     _setup_roo_cline()
 except Exception as e:
     logger.error(f"Roo Cline setup failed: {e}")
+
+try:
+    _setup_posit_assistant()
+except Exception as e:
+    logger.error(f"Posit Assistant setup failed: {e}")
 PYEOF

@@ -35,7 +35,7 @@ To access a stable build, users may refer to specific SHA hash tags on the [GitH
 ## Features
 
 - **IDEs:** Jupyter Lab, RStudio Server, VSCode (code-server) with common extensions
-- **AI Coding Assistants:** [opencode](https://opencode.ai) CLI and VSCode extension, [Roo Cline](https://github.com/RooVeterinaryInc/roo-cline) VSCode extension
+- **AI Coding Assistants:** [opencode](https://opencode.ai) CLI and VSCode extension, [Roo Cline](https://github.com/RooVeterinaryInc/roo-cline) VSCode extension, [Posit Assistant](https://assistant.posit.co) in RStudio
 - **ML Plugins:** Tensorboard support
 - **Python:** 3.12 with pip-based environment at `/opt/venv` (user-writable)
 - **CUDA Support:** CUDA 13 runtime libraries (GPU image only)
@@ -114,11 +114,25 @@ Additional utilities and VSCode extensions are installed in `/opt/share` (via `X
 
 **Roo Cline** is configured automatically at Jupyter server start via a startup hook that reads `OPENAI_API_KEY` from the environment.
 
+**Posit Assistant** (the AI pane in RStudio) is baked into the image at `/etc/rstudio/pai/bin`,
+so users are not prompted to download it on first use. It is pointed at NRP via
+`OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` (derived from `OPENAI_API_KEY`)
+in the same startup hook, and the model is seeded into `~/.posit/assistant/settings.json`
+on first launch — edit that file, or use the assistant's own settings UI, to change models
+or switch to another provider (Posit AI, Anthropic, OpenAI, ...).
+
 The only env var required for NRP access:
 
 | Variable | Description |
 |---|---|
 | `OPENAI_API_KEY` | NRP API key |
+
+### Testing changes
+
+Pull requests that touch the Dockerfiles or install scripts build a throwaway amd64 image at
+`ghcr.io/rocker-org/ml:pr-<number>` (and `.../cuda:pr-<number>`) via `.github/workflows/build-pr.yml`,
+so a change can be pulled and tried before it is merged. `smoke-test.sh` runs against that image in
+CI and can be run locally against any tag: `bash smoke-test.sh rocker-ml:local`.
 
 ### Installing package binaries
 
