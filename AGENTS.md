@@ -88,23 +88,36 @@ Install location is `/etc/rstudio/pai/bin`, the system-wide path RStudio searche
 2. `~/.local/share/rstudio/pai/bin`
 3. `/etc/rstudio/pai/bin`  ← we use this
 
-(3) alone is **not** enough under JupyterHub. `systemConfigDir()` is only `/etc/rstudio`
-when nothing overrides it, and `jupyter-rsession-proxy` sets `RSTUDIO_CONFIG_DIR` to a fresh
-`tempfile.mkdtemp()` for every `rserver` it spawns (`jupyter_rsession_proxy/__init__.py`).
-That variable short-circuits the entire XDG lookup, so RStudio searches `<tmpdir>/pai/bin`,
-finds nothing, and offers to download the assistant — exactly as if it were not installed.
-(The same code path is behind the `session-rpc-key` removal in `install_rstudio.sh`.)
+(3) alone is **not** enough under JupyterHub, and neither is any environment variable
+exported by the Jupyter server. Two separate obstacles:
 
-So the startup hook sets `RSTUDIO_POSIT_AI_PATH` (1) to the system path, but only when the
-user has no copy of their own in (2) — otherwise the env var would shadow an in-IDE update.
-The bundle still lives at (3) so a plain `rserver`, launched without the proxy, finds it
-with no environment help.
+1. `jupyter-rsession-proxy` sets `RSTUDIO_CONFIG_DIR` to a fresh `tempfile.mkdtemp()` for
+   every `rserver` it spawns. That variable short-circuits the whole XDG lookup, so
+   `systemConfigDir()` becomes the temp dir and RStudio searches `<tmpdir>/pai/bin`.
+   (Same code path as the `session-rpc-key` removal in `install_rstudio.sh`.)
+2. `rserver` does **not** pass its environment to `rsession`. It builds a curated ~27-var
+   environment (`RS_*`, `RSTUDIO_*`, `R_*`, plus `HOME`, `PATH`, `USER`, `LOGNAME`, `LANG`,
+   `SHELL`, `LD_LIBRARY_PATH`, `XDG_CONFIG_HOME`) and drops everything else — verified on a
+   live pod: 92 vars in `rserver`, 27 in `rsession`. `/etc/rstudio/env-vars` does not help
+   either; `rserver` only `setenv()`s that into its own process.
 
-Runtime config comes from `_setup_posit_assistant()` in the Jupyter startup hook. The
-assistant reads `OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` for its
+So the config goes through **R's `Renviron.site`**, which is the one channel that reaches a
+session: R `putenv()`s it into the `rsession` process at startup, and `SessionChat` launches
+the assistant's Node backend with `core::system::environment()` — the full process env — so
+the backend inherits it too. (RStudio's own source cites `~/.Renviron` as how proxy vars
+reach that backend.) This is the same reason `set_renviron.sh` exists in this repo.
+
+`install_posit_assistant.sh` writes a delimited managed block into `$(R RHOME)/etc/Renviron.site`
+with `RSTUDIO_POSIT_AI_PATH` and the provider base URL, and chowns the file to `$NB_USER`.
+The startup hook rewrites that block each start to fill in `OPENAI_COMPATIBLE_API_KEY`, which
+is a runtime secret. Keeping it there rather than in `~/.Renviron` means the key lives on the
+container filesystem and is regenerated every start, instead of persisting in the home volume
+after it is rotated. The hook drops `RSTUDIO_POSIT_AI_PATH` from the block when the user has
+their own copy in `~/.local/share/rstudio/pai/bin`, so an in-IDE update still wins.
+
+The assistant reads `OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` for its
 "OpenAI Compatible" provider, and env vars outrank both `~/.posit/ai/providers.json` and
-the settings UI. `rserver` is spawned by jupyter-rsession-proxy as a child of the Jupyter
-server, so exporting them in the hook is enough.
+the settings UI.
 
 Model choice is *not* env-configurable in the shipping build (the documented
 `POSIT_ASSISTANT_SETTINGS_DEFAULT` / `_ENFORCED` variables are not in the 1.1.0 bundle —

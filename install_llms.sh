@@ -107,31 +107,51 @@ def _setup_roo_cline():
 
 def _setup_posit_assistant():
     # Posit Assistant (the AI pane in RStudio) is baked into the image by
-    # install_posit_assistant.sh; this only points it at the NRP endpoint.
+    # install_posit_assistant.sh, which also writes a managed block into R's
+    # Renviron.site with the install path and the provider base URL.
     #
-    # Provider credentials come from the environment: the assistant reads
-    # OPENAI_COMPATIBLE_{BASE_URL,API_KEY} for its "OpenAI Compatible" provider,
-    # and env vars outrank both ~/.posit/ai/providers.json and the settings UI.
-    # rserver is spawned by jupyter-rsession-proxy as a child of this process,
-    # so setting them here is enough for the rsession that hosts the assistant.
-    os.environ.setdefault("OPENAI_COMPATIBLE_BASE_URL", "https://ellm.nrp-nautilus.io/v1")
+    # Why Renviron.site and not the environment: rserver hands rsession a
+    # curated ~27-variable environment and drops everything else, so nothing
+    # exported here ever reaches the RStudio session. R reads Renviron.site at
+    # startup and putenv()s it into the rsession process, which the assistant's
+    # Node backend inherits. Only the API key is missing from that block,
+    # because it is a runtime secret -- fill it in now.
+    #
+    # Rewriting the whole block (rather than appending) keeps it idempotent
+    # across restarts and means a rotated key never lingers.
+    renviron = pathlib.Path(os.environ.get("R_HOME", "/usr/lib/R")) / "etc/Renviron.site"
+    begin, end = "# >>> rocker-ml posit-assistant >>>", "# <<< rocker-ml posit-assistant <<<"
     api_key = os.environ.get("OPENAI_API_KEY", "")
-    if api_key:
-        os.environ.setdefault("OPENAI_COMPATIBLE_API_KEY", api_key)
 
-    # RStudio finds the image-baked bundle at /etc/rstudio/pai/bin only when it
-    # resolves systemConfigDir() to /etc/rstudio. jupyter-rsession-proxy sets
-    # RSTUDIO_CONFIG_DIR to a fresh mkdtemp() for every rserver it spawns, and
-    # that variable short-circuits the whole XDG lookup -- so RStudio searches
-    # <tmpdir>/pai/bin, finds nothing, and offers to download the assistant.
-    # Point RSTUDIO_POSIT_AI_PATH (the first entry in RStudio's search order) at
-    # the real location instead. Skipped when the user already has their own copy
-    # in the persistent HOME, so an in-IDE update still wins over the baked one.
+    # An assistant the user updated from inside RStudio lives in the persistent
+    # HOME and must win; RSTUDIO_POSIT_AI_PATH would otherwise shadow it.
     system_install = pathlib.Path("/etc/rstudio/pai/bin")
     user_install = pathlib.Path.home() / ".local/share/rstudio/pai/bin"
-    if not (user_install / "dist/server/main.js").exists() \
-            and (system_install / "dist/server/main.js").exists():
-        os.environ.setdefault("RSTUDIO_POSIT_AI_PATH", str(system_install))
+    use_system = ((system_install / "dist/server/main.js").exists()
+                  and not (user_install / "dist/server/main.js").exists())
+
+    lines = [begin, "# Managed by install_posit_assistant.sh and the Jupyter startup hook."]
+    if use_system:
+        lines.append(f"RSTUDIO_POSIT_AI_PATH={system_install}")
+    lines.append("OPENAI_COMPATIBLE_BASE_URL=https://ellm.nrp-nautilus.io/v1")
+    if api_key:
+        lines.append(f"OPENAI_COMPATIBLE_API_KEY={api_key}")
+    lines.append(end)
+
+    try:
+        existing = renviron.read_text() if renviron.exists() else ""
+    except Exception:
+        existing = ""
+    if begin in existing and end in existing:
+        head, rest = existing.split(begin, 1)
+        existing = head + rest.split(end, 1)[1]
+    renviron.write_text(existing.rstrip("\n") + "\n\n" + "\n".join(lines) + "\n")
+
+    # Also export into this process, so terminals and any non-rsession consumer
+    # (the `pa` CLI, code-server terminals) see the same provider config.
+    os.environ.setdefault("OPENAI_COMPATIBLE_BASE_URL", "https://ellm.nrp-nautilus.io/v1")
+    if api_key:
+        os.environ.setdefault("OPENAI_COMPATIBLE_API_KEY", api_key)
 
     # Model choice is not env-configurable in the shipping assistant build, so
     # seed the user's settings file on first launch (same pattern as opencode).
@@ -146,6 +166,7 @@ def _setup_posit_assistant():
                 "id": "qwen3"
             }
         }, indent=2))
+
 
 try:
     _setup_opencode()
