@@ -93,6 +93,11 @@ COPY Rprofile /usr/lib/R/etc/Rprofile.site
 COPY install_rstudio.sh install_rstudio.sh
 RUN bash install_rstudio.sh
 
+# Posit Assistant: bake the AI-pane bundle into the image so users are not
+# prompted to download it per-session (see install_posit_assistant.sh).
+COPY install_posit_assistant.sh install_posit_assistant.sh
+RUN bash install_posit_assistant.sh
+
 
 ## Add rstudio's binaries to path for quarto
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin/quarto/bin

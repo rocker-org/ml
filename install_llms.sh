@@ -51,7 +51,7 @@ export OPENCODE_CONFIG="${HOME}/.config/opencode/opencode.json"
 EOF
 chmod 0644 /etc/profile.d/opencode.sh
 
-# Roo Cline pre-configuration via Jupyter server startup hook.
+# Roo Cline (and Posit Assistant) pre-configuration via Jupyter server startup hook.
 # /etc/jupyter/ is in Jupyter's config search path (outside $HOME, survives JupyterHub mounts).
 # This script runs when the Jupyter server starts — before users access code-server.
 # It generates a Roo settings import file with OPENAI_API_KEY from the environment,
@@ -60,7 +60,7 @@ chmod 0644 /etc/profile.d/opencode.sh
 # and API key are configured automatically each session.
 mkdir -p /etc/jupyter
 cat > /etc/jupyter/jupyter_server_config.py <<'PYEOF'
-"""Jupyter server startup hook: seed per-user opencode config and Roo Cline settings."""
+"""Jupyter server startup hook: seed per-user opencode, Roo Cline and Posit Assistant settings."""
 import os, json, pathlib, logging, shutil
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,69 @@ def _setup_roo_cline():
     existing["roo-cline.autoImportSettingsPath"] = str(settings_file)
     cs_settings_file.write_text(json.dumps(existing, indent=2))
 
+def _setup_posit_assistant():
+    # Posit Assistant (the AI pane in RStudio) is baked into the image by
+    # install_posit_assistant.sh, which also writes a managed block into R's
+    # Renviron.site with the install path and the provider base URL.
+    #
+    # Why Renviron.site and not the environment: rserver hands rsession a
+    # curated ~27-variable environment and drops everything else, so nothing
+    # exported here ever reaches the RStudio session. R reads Renviron.site at
+    # startup and putenv()s it into the rsession process, which the assistant's
+    # Node backend inherits. Only the API key is missing from that block,
+    # because it is a runtime secret -- fill it in now.
+    #
+    # Rewriting the whole block (rather than appending) keeps it idempotent
+    # across restarts and means a rotated key never lingers.
+    renviron = pathlib.Path(os.environ.get("R_HOME", "/usr/lib/R")) / "etc/Renviron.site"
+    begin, end = "# >>> rocker-ml posit-assistant >>>", "# <<< rocker-ml posit-assistant <<<"
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+
+    # An assistant the user updated from inside RStudio lives in the persistent
+    # HOME and must win; RSTUDIO_POSIT_AI_PATH would otherwise shadow it.
+    system_install = pathlib.Path("/etc/rstudio/pai/bin")
+    user_install = pathlib.Path.home() / ".local/share/rstudio/pai/bin"
+    use_system = ((system_install / "dist/server/main.js").exists()
+                  and not (user_install / "dist/server/main.js").exists())
+
+    lines = [begin, "# Managed by install_posit_assistant.sh and the Jupyter startup hook."]
+    if use_system:
+        lines.append(f"RSTUDIO_POSIT_AI_PATH={system_install}")
+    lines.append("OPENAI_COMPATIBLE_BASE_URL=https://ellm.nrp-nautilus.io/v1")
+    if api_key:
+        lines.append(f"OPENAI_COMPATIBLE_API_KEY={api_key}")
+    lines.append(end)
+
+    try:
+        existing = renviron.read_text() if renviron.exists() else ""
+    except Exception:
+        existing = ""
+    if begin in existing and end in existing:
+        head, rest = existing.split(begin, 1)
+        existing = head + rest.split(end, 1)[1]
+    renviron.write_text(existing.rstrip("\n") + "\n\n" + "\n".join(lines) + "\n")
+
+    # Also export into this process, so terminals and any non-rsession consumer
+    # (the `pa` CLI, code-server terminals) see the same provider config.
+    os.environ.setdefault("OPENAI_COMPATIBLE_BASE_URL", "https://ellm.nrp-nautilus.io/v1")
+    if api_key:
+        os.environ.setdefault("OPENAI_COMPATIBLE_API_KEY", api_key)
+
+    # Model choice is not env-configurable in the shipping assistant build, so
+    # seed the user's settings file on first launch (same pattern as opencode).
+    # It lives in the persistent HOME, so later edits in the UI stick; delete it
+    # and restart the container to go back to the defaults below.
+    settings_file = pathlib.Path.home() / ".posit/assistant/settings.json"
+    if not settings_file.exists():
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        settings_file.write_text(json.dumps({
+            "model": {
+                "provider": "openai-compatible",
+                "id": "qwen3"
+            }
+        }, indent=2))
+
+
 try:
     _setup_opencode()
 except Exception as e:
@@ -114,4 +177,9 @@ try:
     _setup_roo_cline()
 except Exception as e:
     logger.error(f"Roo Cline setup failed: {e}")
+
+try:
+    _setup_posit_assistant()
+except Exception as e:
+    logger.error(f"Posit Assistant setup failed: {e}")
 PYEOF
