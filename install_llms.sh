@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Fail the build at the point of failure. Without this, a transient download
+# failure in the opencode installer (a truncated tarball, an error page from the
+# CDN) leaves the RUN layer green and silently ships an image with no opencode.
+set -eo pipefail
+
 # opencode cli - installer hardcodes $HOME/.opencode/bin, so move to /usr/local/bin
 curl -fsSL https://opencode.ai/install | bash && \
   mv "${HOME}/.opencode/bin/opencode" /usr/local/bin/opencode && \
