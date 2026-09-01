@@ -105,7 +105,31 @@ home = pathlib.Path.home()
 assert (home / '.config/opencode/opencode.json').exists(), 'opencode config not seeded'
 s = json.loads((home / '.posit/assistant/settings.json').read_text())
 assert s['model']['provider'] == 'openai-compatible', s
-assert json.loads(pathlib.Path('/tmp/roo-cline/nrp-settings.json').read_text())
+
+# Kilo's config dir must resolve into the persistent HOME, not $XDG_CONFIG_HOME,
+# or every custom model a user adds is lost on restart.
+import os
+link = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(home / '.config'))) / 'kilo'
+target = home / '.config/kilo'
+assert link.resolve() == target.resolve(), f'{link} -> {link.resolve()}, expected {target}'
+k = json.loads((target / 'kilo.json').read_text())
+assert 'nrp' in k['provider'], k
+PY
+SCRIPT
+
+# A user-added model must survive the hook re-running on the next container start.
+check_script "kilo config survives a restart" <<'SCRIPT'
+set -e
+python3 - <<'PY'
+import json, pathlib, runpy
+runpy.run_path('/etc/jupyter/jupyter_server_config.py')
+cfg = pathlib.Path.home() / '.config/kilo/kilo.json'
+data = json.loads(cfg.read_text())
+data['provider']['nrp']['models']['smoke-test-model'] = {'name': 'Smoke Test'}
+cfg.write_text(json.dumps(data, indent=2))
+runpy.run_path('/etc/jupyter/jupyter_server_config.py')
+data = json.loads(cfg.read_text())
+assert 'smoke-test-model' in data['provider']['nrp']['models'], 'user edit was clobbered'
 PY
 SCRIPT
 

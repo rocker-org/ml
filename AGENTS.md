@@ -177,29 +177,41 @@ The relevant RStudio prefs (`assistant`, `chat_provider`) already default to `po
 `/etc/rstudio/rstudio-prefs.json` entry is needed. `RSTUDIO_DISABLE_POSIT_ASSISTANT` is the
 off switch if one is ever wanted.
 
-## Roo Cline Configuration
+## Kilo Code Configuration
 
-Roo Cline stores its API provider config in VS Code **secret storage**, which falls back to
-in-memory on Linux (no libsecret). This means secrets reset on every code-server restart.
+Kilo Code v7 is an opencode fork. Its `data`, `state` and `cache` directories are
+HOME-resident (`~/.local/share/kilo`, `~/.local/state/kilo`, `~/.cache/kilo`) and so persist
+on the JupyterHub home volume, but its **config** directory is `$XDG_CONFIG_HOME/kilo` — and
+this image points `XDG_CONFIG_HOME` at `/opt/share/xdg-config`, which lives in the image, not
+the volume. Everything Kilo writes there (custom providers and models added from the UI,
+agents, MCP servers, all of `kilo.json`) was therefore discarded on every restart.
 
-To work around this, `/etc/jupyter/jupyter_server_config.py` is installed at build time.
-This hook runs when the Jupyter server starts (before the user accesses code-server) and:
+`install_llms.sh` replaces that directory with a symlink:
 
-1. Reads `OPENAI_API_KEY` from the environment
-2. Writes a Roo settings import file to `/tmp/roo-cline/nrp-settings.json`
-3. Sets `roo-cline.autoImportSettingsPath` in `~/.local/share/code-server/User/settings.json`
+    /opt/share/xdg-config/kilo -> /home/jovyan/.config/kilo
 
-Roo re-reads `autoImportSettingsPath` on every extension activation and re-imports the NRP
-provider config (including API key) automatically each session.
+so the extension reads and writes the persistent HOME without knowing anything about it.
+`kilo debug paths` still prints the `/opt/share` path; it resolves into HOME.
 
-`/etc/jupyter/` is in Jupyter's config search path and is outside `$HOME`, so it persists
-across JupyterHub volume mounts. The generated `/tmp/roo-cline/nrp-settings.json` lives only
-for the duration of the container session (correct: it gets regenerated each time with the
-current `OPENAI_API_KEY`).
+The sysadmin template lives at `/opt/share/kilo-template/kilo.json` (outside `$HOME`, since a
+build-time write to `$HOME` is shadowed by the volume mount). The Jupyter startup hook
+`/etc/jupyter/jupyter_server_config.py`:
 
-The `~/.local/share/code-server/User/settings.json` entry persists in the user's home
-volume once written, so new users get it on first Jupyter start and it stays for subsequent
-sessions.
+1. Re-asserts the symlink — repairing a container whose `/opt/share` predates this change,
+   and moving anything already written to the ephemeral location into HOME first
+2. Copies the template to `~/.config/kilo/kilo.json` if that file does not exist
+
+The template uses the same `{env:OPENAI_API_KEY}` syntax as the opencode config (Kilo reads
+the opencode config format verbatim, including `opencode.json` as a legacy global filename),
+so the key is expanded at read time and never written to disk. Delete
+`~/.config/kilo/kilo.json` and restart to re-seed from the current template.
+
+`/etc/jupyter/` is in Jupyter's config search path and outside `$HOME`, so the hook itself
+survives JupyterHub volume mounts.
+
+Note the earlier Roo Cline wiring (`roo-cline.autoImportSettingsPath` into the code-server
+`settings.json`) has been removed: the installed extension is `kilocode.kilo-code`, and the v7
+rewrite contributes only `kilo-code.new.*` settings — it never read the Roo keys.
 
 ## Testing a change before merging
 
@@ -212,7 +224,7 @@ lines for hand-testing.
 
 `smoke-test.sh` also runs locally against any tag (`bash smoke-test.sh rocker-ml:local`,
 pairing with `run.sh`). It asserts R/Python/Jupyter/RStudio/quarto/opencode are present and
-that the Jupyter startup hook actually seeds the opencode, Roo and Posit Assistant config
+that the Jupyter startup hook actually seeds the opencode, Kilo Code and Posit Assistant config
 when executed with an `OPENAI_API_KEY` in the environment. It does **not** cover anything
 GPU (no GPU runners) or anything that needs a browser — the IDE panes still need a human.
 

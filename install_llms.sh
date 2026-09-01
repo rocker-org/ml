@@ -51,16 +51,59 @@ export OPENCODE_CONFIG="${HOME}/.config/opencode/opencode.json"
 EOF
 chmod 0644 /etc/profile.d/opencode.sh
 
-# Roo Cline (and Posit Assistant) pre-configuration via Jupyter server startup hook.
+# Kilo Code (VS Code extension) config persistence.
+#
+# Kilo v7 is an opencode fork: its data/, state/ and cache/ dirs are HOME-resident
+# (~/.local/share/kilo, ~/.local/state/kilo, ~/.cache/kilo -- all persistent on
+# JupyterHub), but its *config* dir is $XDG_CONFIG_HOME/kilo, and this image points
+# XDG_CONFIG_HOME at /opt/share/xdg-config, which is image-resident and therefore
+# thrown away on every restart. Anything a user configures in the Kilo UI that lands
+# in kilo.json -- custom providers, custom models, agents, MCP servers -- was lost.
+#
+# Fix: replace $XDG_CONFIG_HOME/kilo with a symlink into the persistent HOME, so the
+# extension reads and writes ~/.config/kilo without knowing anything about it. The
+# sysadmin template stays outside HOME (a build-time write to $HOME is shadowed by
+# the JupyterHub volume mount) and is copied in on first launch by the startup hook.
+mkdir -p /opt/share/kilo-template
+cat > /opt/share/kilo-template/kilo.json <<'EOF'
+{
+  "model": "nrp/qwen3",
+  "provider": {
+    "nrp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NRP",
+      "options": {
+        "baseURL": "https://ellm.nrp-nautilus.io/v1",
+        "apiKey": "{env:OPENAI_API_KEY}"
+      },
+      "models": {
+        "qwen3": {
+          "name": "Qwen3"
+        },
+        "minimax-m2": {
+          "name": "MiniMax M2"
+        }
+      }
+    },
+    "copilot": {}
+  }
+}
+EOF
+rm -rf ${XDG_CONFIG_HOME}/kilo
+ln -s /home/${NB_USER:-jovyan}/.config/kilo ${XDG_CONFIG_HOME}/kilo
+chown -h ${NB_USER:-jovyan}:users ${XDG_CONFIG_HOME}/kilo
+chown -R ${NB_USER:-jovyan}:users /opt/share/kilo-template
+
+# Kilo Code (and Posit Assistant) pre-configuration via Jupyter server startup hook.
 # /etc/jupyter/ is in Jupyter's config search path (outside $HOME, survives JupyterHub mounts).
 # This script runs when the Jupyter server starts — before users access code-server.
-# It generates a Roo settings import file with OPENAI_API_KEY from the environment,
-# then sets roo-cline.autoImportSettingsPath in the code-server user settings.json.
-# Roo re-reads autoImportSettingsPath on every extension activation, so the NRP provider
-# and API key are configured automatically each session.
+# It repairs the $XDG_CONFIG_HOME/kilo -> ~/.config/kilo symlink and seeds the user's
+# kilo.json from the image-baked template on first launch. The API key is not written
+# into the file: {env:OPENAI_API_KEY} is resolved by Kilo at read time from the
+# environment the extension host inherits.
 mkdir -p /etc/jupyter
 cat > /etc/jupyter/jupyter_server_config.py <<'PYEOF'
-"""Jupyter server startup hook: seed per-user opencode, Roo Cline and Posit Assistant settings."""
+"""Jupyter server startup hook: seed per-user opencode, Kilo Code and Posit Assistant settings."""
 import os, json, pathlib, logging, shutil
 logger = logging.getLogger(__name__)
 
@@ -75,35 +118,39 @@ def _setup_opencode():
         shutil.copyfile(template, user_config)
     os.environ.setdefault("OPENCODE_CONFIG", str(user_config))
 
-def _setup_roo_cline():
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    settings_dir = pathlib.Path("/tmp/roo-cline")
-    settings_dir.mkdir(exist_ok=True)
-    settings_file = settings_dir / "nrp-settings.json"
-    settings_file.write_text(json.dumps({
-        "providerProfiles": {
-            "currentApiConfigName": "NRP",
-            "apiConfigs": {
-                "NRP": {
-                    "apiProvider": "openai",
-                    "openAiBaseUrl": "https://ellm.nrp-nautilus.io/v1",
-                    "openAiApiKey": api_key,
-                    "openAiModelId": "qwen3"
-                }
-            }
-        }
-    }, indent=2))
-    # Update code-server user settings.json to point Roo at the generated file.
-    # code-server user-data-dir defaults to ~/.local/share/code-server (in $HOME persistent volume).
-    cs_settings_dir = pathlib.Path.home() / ".local/share/code-server/User"
-    cs_settings_dir.mkdir(parents=True, exist_ok=True)
-    cs_settings_file = cs_settings_dir / "settings.json"
-    try:
-        existing = json.loads(cs_settings_file.read_text()) if cs_settings_file.exists() else {}
-    except Exception:
-        existing = {}
-    existing["roo-cline.autoImportSettingsPath"] = str(settings_file)
-    cs_settings_file.write_text(json.dumps(existing, indent=2))
+def _setup_kilo():
+    # Kilo reads its global config from $XDG_CONFIG_HOME/kilo, which this image points
+    # outside $HOME so that image-baked config is not shadowed by the JupyterHub volume
+    # mount -- but that also means anything Kilo *writes* there (custom providers and
+    # models added from the UI, agents, MCP servers) is discarded on restart. The build
+    # replaces that directory with a symlink to ~/.config/kilo, on the persistent HOME
+    # volume; re-assert it here so a container whose /opt/share predates this change, or
+    # in which something recreated a real directory, still ends up persistent.
+    xdg = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", str(pathlib.Path.home() / ".config")))
+    link = xdg / "kilo"
+    target = pathlib.Path.home() / ".config/kilo"
+    target.mkdir(parents=True, exist_ok=True)
+    if link.resolve() != target.resolve():
+        if link.is_symlink():
+            link.unlink()
+        elif link.is_dir():
+            # Salvage anything already written into the ephemeral location.
+            for item in link.iterdir():
+                dest = target / item.name
+                if not dest.exists():
+                    shutil.move(str(item), str(dest))
+            shutil.rmtree(link)
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+
+    # Seed the NRP provider on first launch. The template uses {env:OPENAI_API_KEY},
+    # which Kilo expands at read time, so no secret is written to disk. Later edits
+    # from the Kilo UI land in this same file and now survive a restart; delete it and
+    # restart to go back to the template.
+    template = pathlib.Path("/opt/share/kilo-template/kilo.json")
+    user_config = target / "kilo.json"
+    if not user_config.exists() and template.exists():
+        shutil.copyfile(template, user_config)
 
 def _setup_posit_assistant():
     # Posit Assistant (the AI pane in RStudio) is baked into the image by
@@ -174,9 +221,9 @@ except Exception as e:
     logger.error(f"opencode setup failed: {e}")
 
 try:
-    _setup_roo_cline()
+    _setup_kilo()
 except Exception as e:
-    logger.error(f"Roo Cline setup failed: {e}")
+    logger.error(f"Kilo Code setup failed: {e}")
 
 try:
     _setup_posit_assistant()
