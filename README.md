@@ -35,7 +35,7 @@ To access a stable build, users may refer to specific SHA hash tags on the [GitH
 ## Features
 
 - **IDEs:** Jupyter Lab, RStudio Server, VSCode (code-server) with common extensions
-- **AI Coding Assistants:** [opencode](https://opencode.ai) CLI and VSCode extension, [Roo Cline](https://github.com/RooVeterinaryInc/roo-cline) VSCode extension, [Posit Assistant](https://assistant.posit.co) in RStudio
+- **AI Coding Assistants:** [opencode](https://opencode.ai) CLI and VSCode extension, [Kilo Code](https://kilocode.ai) VSCode extension, [Posit Assistant](https://assistant.posit.co) in RStudio
 - **ML Plugins:** Tensorboard support
 - **Python:** 3.12 with pip-based environment at `/opt/venv` (user-writable)
 - **CUDA Support:** CUDA 13 runtime libraries (GPU image only)
@@ -106,13 +106,16 @@ Additional utilities and VSCode extensions are installed in `/opt/share` (via `X
 
 ### AI Coding Assistants
 
-[opencode](https://opencode.ai) (CLI + VSCode extension) and [Roo Cline](https://github.com/RooVeterinaryInc/roo-cline) (VSCode extension) are pre-installed and pre-configured for the NRP Nautilus LLM endpoint.
+[opencode](https://opencode.ai) (CLI + VSCode extension) and [Kilo Code](https://kilocode.ai) (VSCode extension) are pre-installed and pre-configured for the NRP Nautilus LLM endpoint.
 
 **opencode** has two providers enabled out of the box:
 - **NRP**: default provider, requires `OPENAI_API_KEY` injected via JupyterHub helm chart
 - **GitHub Copilot**: available to any user with a Copilot subscription — run `/connect` in opencode to authenticate via device flow (one-time per user; token persists in home volume)
 
-**Roo Cline** is configured automatically at Jupyter server start via a startup hook that reads `OPENAI_API_KEY` from the environment.
+**Kilo Code** is seeded with the same NRP provider at Jupyter server start. Its config lives at
+`~/.config/kilo/kilo.json` — on the persistent home volume, reached through a
+`$XDG_CONFIG_HOME/kilo` symlink — so any model or provider a user adds from the Kilo UI
+survives a restart. Delete that file and restart to go back to the image defaults.
 
 **Posit Assistant** (the AI pane in RStudio) is baked into the image at `/etc/rstudio/pai/bin`,
 so users are not prompted to download it on first use. Its install path and the NRP provider
