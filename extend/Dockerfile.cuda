@@ -43,6 +43,11 @@ USER root
 # GDAL/GEOS/PROJ come from Ubuntu itself (26.04 ships GDAL 3.12). The -dev
 # packages are needed because the Python spatial packages below are built from
 # source against them.
+# python3-dev is in that list for the same reason: SPATIAL_NO_BINARY compiles C
+# extensions, so Python.h has to be present. It used to arrive by accident as a
+# transitive dependency of an r-cran-* package in the base image; when that
+# dependency went away every spatial build started failing at shapely with
+# "fatal error: Python.h: No such file or directory". Ask for it explicitly.
 # Do NOT delete /var/lib/apt/lists here: bspm shells out to apt to install the
 # r-cran-* binaries, and with the lists emptied it cannot find them and silently
 # falls back to compiling every R package from source.
@@ -52,6 +57,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgeos-dev \
     libproj-dev \
     proj-bin \
+    python3-dev \
     libarrow2300 libparquet2300 libarrow-dataset2300 libarrow-acero2300
 
 COPY --from=plugin-builder /plugins /tmp/plugins
