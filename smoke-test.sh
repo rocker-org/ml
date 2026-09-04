@@ -15,7 +15,7 @@ fail=0
 # One-liner check: runs in a login shell inside the image.
 check() {
     local name="$1"; shift
-    if docker run --rm --user jovyan -e OPENAI_API_KEY=smoke-test-key "$IMAGE" \
+    if docker run --rm --user jovyan "$IMAGE" \
             bash -lc "$*" >/tmp/smoke.out 2>&1; then
         echo "ok    ${name}"
     else
@@ -28,7 +28,7 @@ check() {
 # Script check: reads the script from stdin, so it can contain any quoting.
 check_script() {
     local name="$1"
-    if docker run --rm -i --user jovyan -e OPENAI_API_KEY=smoke-test-key "$IMAGE" \
+    if docker run --rm -i --user jovyan "$IMAGE" \
             bash -s >/tmp/smoke.out 2>&1; then
         echo "ok    ${name}"
     else
@@ -57,10 +57,10 @@ check "posit assistant readable by user" "head -c1 /etc/rstudio/pai/bin/dist/ser
 # The bundle being on disk is not enough, and neither is exporting variables
 # from the Jupyter server: rserver hands rsession a curated ~27-variable
 # environment and drops everything else. R's Renviron.site is what actually
-# gets through. Run the startup hook, then read the variables back from an R
-# process started with a DELIBERATELY EMPTY environment -- if they show up
-# there, they came from Renviron.site, which is exactly how rsession and the
-# assistant's Node backend will get them.
+# gets through. Run the startup hook, then read the variable back from an R
+# process started with a DELIBERATELY EMPTY environment -- if it shows up
+# there, it came from Renviron.site, which is exactly how rsession and the
+# assistant's Node backend will get it.
 check_script "assistant config reaches an rsession-like environment" <<'SCRIPT'
 set -e
 python3 -c 'import runpy; runpy.run_path("/etc/jupyter/jupyter_server_config.py")'
@@ -69,12 +69,12 @@ python3 -c 'import runpy; runpy.run_path("/etc/jupyter/jupyter_server_config.py"
 # temp RSTUDIO_CONFIG_DIR the rsession-proxy sets (which breaks the /etc lookup).
 env -i HOME="$HOME" PATH=/usr/local/bin:/usr/bin:/bin LANG=C \
     RSTUDIO_CONFIG_DIR="$(mktemp -d)" \
-    R -q -s -e 'cat(Sys.getenv("RSTUDIO_POSIT_AI_PATH"), Sys.getenv("OPENAI_COMPATIBLE_API_KEY"), Sys.getenv("OPENAI_COMPATIBLE_BASE_URL"), Sys.getenv("RSTUDIO_CONFIG_DIR"), sep="\n")' \
+    R -q -s -e 'cat(Sys.getenv("RSTUDIO_POSIT_AI_PATH"), Sys.getenv("RSTUDIO_CONFIG_DIR"), sep="\n")' \
     > /tmp/rsession-env
 
 python3 - <<'PY'
 import pathlib
-path, key, url, cfgdir = pathlib.Path('/tmp/rsession-env').read_text().splitlines()
+path, cfgdir = pathlib.Path('/tmp/rsession-env').read_text().splitlines()
 
 def valid(p):
     p = pathlib.Path(p)
@@ -89,47 +89,64 @@ candidates = [c for c in (
 
 found = next((c for c in candidates if valid(c)), None)
 assert found, f'RStudio would find no assistant install; searched {candidates}'
-assert key == 'smoke-test-key', f'provider API key did not reach the session: {key!r}'
-assert url.startswith('https://'), f'provider base URL did not reach the session: {url!r}'
-print(f'resolves to {found}, credentials present')
+print(f'resolves to {found}')
 PY
 SCRIPT
 
-# The hook is also responsible for the per-user config files.
-check_script "startup hook seeds per-user AI config" <<'SCRIPT'
+# The hook is responsible for keeping assistant config on the persistent HOME.
+check_script "assistant config dirs live on the persistent HOME" <<'SCRIPT'
 set -e
 python3 - <<'PY'
-import json, pathlib, runpy
+import os, pathlib, runpy
 runpy.run_path('/etc/jupyter/jupyter_server_config.py')
 home = pathlib.Path.home()
-assert (home / '.config/opencode/opencode.json').exists(), 'opencode config not seeded'
-s = json.loads((home / '.posit/assistant/settings.json').read_text())
-assert s['model']['provider'] == 'openai-compatible', s
-
-# Kilo's config dir must resolve into the persistent HOME, not $XDG_CONFIG_HOME,
-# or every custom model a user adds is lost on restart.
-import os
-link = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(home / '.config'))) / 'kilo'
-target = home / '.config/kilo'
-assert link.resolve() == target.resolve(), f'{link} -> {link.resolve()}, expected {target}'
-k = json.loads((target / 'kilo.json').read_text())
-assert 'nrp' in k['provider'], k
+xdg = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(home / '.config')))
+for app in ('opencode', 'kilo'):
+    link, target = xdg / app, home / '.config' / app
+    assert link.resolve() == target.resolve(), f'{link} -> {link.resolve()}, expected {target}'
 PY
 SCRIPT
 
-# A user-added model must survive the hook re-running on the next container start.
-check_script "kilo config survives a restart" <<'SCRIPT'
+# Nothing may be pre-configured: no provider, no model, no API key. Users
+# configure the assistants interactively, and the image must not need a key.
+check_script "assistants ship unconfigured" <<'SCRIPT'
+set -e
+python3 - <<'PY'
+import pathlib
+home = pathlib.Path.home()
+for f in ('.config/opencode/opencode.json', '.config/opencode/opencode.jsonc',
+          '.config/kilo/kilo.json', '.config/kilo/kilo.jsonc',
+          '.posit/assistant/settings.json'):
+    assert not (home / f).exists(), f'{f} was pre-seeded'
+renviron = pathlib.Path('/usr/lib/R/etc/Renviron.site').read_text()
+for var in ('OPENAI_COMPATIBLE_BASE_URL', 'OPENAI_COMPATIBLE_API_KEY', 'OPENAI_API_KEY'):
+    assert var not in renviron, f'{var} is baked into Renviron.site'
+PY
+grep -rq "ellm.nrp-nautilus.io" /etc/jupyter /opt/share/xdg-config /etc/profile.d 2>/dev/null \
+    && { echo "NRP endpoint still baked into the image"; exit 1; }
+test ! -e /etc/profile.d/opencode.sh || { echo "stale opencode profile.d remains"; exit 1; }
+SCRIPT
+
+# A config a user writes must survive the hook re-running on the next start.
+check_script "user config survives a restart" <<'SCRIPT'
 set -e
 python3 - <<'PY'
 import json, pathlib, runpy
 runpy.run_path('/etc/jupyter/jupyter_server_config.py')
-cfg = pathlib.Path.home() / '.config/kilo/kilo.json'
-data = json.loads(cfg.read_text())
-data['provider']['nrp']['models']['smoke-test-model'] = {'name': 'Smoke Test'}
-cfg.write_text(json.dumps(data, indent=2))
+written = {}
+for app, name in (('opencode', 'opencode.json'), ('kilo', 'kilo.json')):
+    # Write through the XDG path, which is what the apps themselves use.
+    import os
+    xdg = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(pathlib.Path.home() / '.config')))
+    cfg = xdg / app / name
+    cfg.write_text(json.dumps({'model': f'my-provider/{app}-model'}, indent=2))
+    written[app] = cfg
 runpy.run_path('/etc/jupyter/jupyter_server_config.py')
-data = json.loads(cfg.read_text())
-assert 'smoke-test-model' in data['provider']['nrp']['models'], 'user edit was clobbered'
+for app, cfg in written.items():
+    data = json.loads(cfg.read_text())
+    assert data['model'] == f'my-provider/{app}-model', f'{app} config was clobbered: {data}'
+    # And it is really on the home volume, not the image.
+    assert str(cfg.resolve()).startswith(str(pathlib.Path.home())), cfg.resolve()
 PY
 SCRIPT
 

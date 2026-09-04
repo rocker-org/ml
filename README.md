@@ -106,32 +106,29 @@ Additional utilities and VSCode extensions are installed in `/opt/share` (via `X
 
 ### AI Coding Assistants
 
-[opencode](https://opencode.ai) (CLI + VSCode extension) and [Kilo Code](https://kilocode.ai) (VSCode extension) are pre-installed and pre-configured for the NRP Nautilus LLM endpoint.
+[opencode](https://opencode.ai) (CLI + VSCode extension), [Kilo Code](https://kilocode.ai)
+(VSCode extension) and [Posit Assistant](https://assistant.posit.co) (the AI pane in RStudio)
+are pre-installed.
 
-**opencode** has two providers enabled out of the box:
-- **NRP**: default provider, requires `OPENAI_API_KEY` injected via JupyterHub helm chart
-- **GitHub Copilot**: available to any user with a Copilot subscription — run `/connect` in opencode to authenticate via device flow (one-time per user; token persists in home volume)
+None of them is pre-configured with a provider, model or API key — you set up whichever you
+want from the app's own UI, with your own key. Your configuration is stored in your home
+directory, so it persists across server restarts:
 
-**Kilo Code** is seeded with the same NRP provider at Jupyter server start. Its config lives at
-`~/.config/kilo/kilo.json` — on the persistent home volume, reached through a
-`$XDG_CONFIG_HOME/kilo` symlink — so any model or provider a user adds from the Kilo UI
-survives a restart. Delete that file and restart to go back to the image defaults.
-
-**Posit Assistant** (the AI pane in RStudio) is baked into the image at `/etc/rstudio/pai/bin`,
-so users are not prompted to download it on first use. Its install path and the NRP provider
-config are passed to the RStudio session through a managed block in R's `Renviron.site` — the
-only channel that reaches `rsession`, which gets a curated environment from `rserver` rather
-than the container's. It is pointed at NRP via
-`OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` (derived from `OPENAI_API_KEY`)
-in the same startup hook, and the model is seeded into `~/.posit/assistant/settings.json`
-on first launch — edit that file, or use the assistant's own settings UI, to change models
-or switch to another provider (Posit AI, Anthropic, OpenAI, ...).
-
-The only env var required for NRP access:
-
-| Variable | Description |
+| Assistant | Where your configuration is kept |
 |---|---|
-| `OPENAI_API_KEY` | NRP API key |
+| opencode | `~/.config/opencode/opencode.json`, credentials in `~/.local/share/opencode/` |
+| Kilo Code | `~/.config/kilo/kilo.json` |
+| Posit Assistant | `~/.posit/assistant/settings.json` |
+
+For opencode, `opencode auth login` walks through provider setup. GitHub Copilot works for
+anyone with a subscription, via a one-time device-flow login.
+
+Posit Assistant is baked into the image at `/etc/rstudio/pai/bin`, so RStudio does not prompt
+you to download it on first use. Its install path reaches the RStudio session through a managed
+block in R's `Renviron.site` — the only channel that gets there, since `rserver` hands
+`rsession` a curated environment rather than the container's.
+
+No environment variables are required.
 
 ### Testing changes
 

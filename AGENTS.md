@@ -95,30 +95,20 @@ We use `/opt/share/` as the base for such files:
 Apps that follow the XDG Base Directory spec will read/write config here instead of
 `~/.config`, keeping their config outside the JupyterHub volume mount.
 
-**opencode** respects `XDG_CONFIG_HOME`, but `/opt/share/xdg-config/` is image-baked
-and not on the persistent HOME volume — so user edits there would not survive a
-container restart. Instead, the image ships a sysadmin **template** at
-`/opt/share/xdg-config/opencode/opencode.json`, and `OPENCODE_CONFIG` (set in
-`/etc/profile.d/opencode.sh` and in the jupyter server env) redirects opencode to
-`$HOME/.config/opencode/opencode.json`. The Jupyter server startup hook seeds the
-user copy from the template on first launch. Users edit freely and changes persist;
-delete the user copy and restart to re-seed from the current template. The API key
-is never stored in the image — `{env:OPENAI_API_KEY}` syntax makes opencode read it
-from the environment at runtime.
+**opencode and Kilo Code** respect `XDG_CONFIG_HOME`, but `/opt/share/xdg-config/` is
+image-baked and not on the persistent HOME volume — so config they write there would
+not survive a restart. Both directories are therefore symlinks into `~/.config`; see
+[AI assistant configuration](#ai-assistant-configuration).
 
-## opencode Configuration
+## opencode
 
-opencode reads `$HOME/.config/opencode/opencode.json` (via `OPENCODE_CONFIG`), seeded
-on first launch from the image template at `/opt/share/xdg-config/opencode/opencode.json`.
-Two providers are enabled out of the box:
-
-- **NRP**: OpenAI-compatible endpoint, default model `qwen3`. Requires `OPENAI_API_KEY`
-  injected at runtime. The `{env:OPENAI_API_KEY}` syntax means the key is never stored in
-  the image.
-- **GitHub Copilot**: Built-in provider. Users authenticate once via `/connect` in opencode
-  (device flow at `github.com/login/device`). The token is stored in
-  `~/.local/share/opencode/auth.json` (HOME persistent volume) and survives container
-  restarts. Alternatively, inject `GITHUB_TOKEN` via JupyterHub to skip interactive auth.
+Installed as both a CLI (`/usr/local/bin/opencode`) and a VS Code extension, with no
+provider configured — see [AI assistant configuration](#ai-assistant-configuration).
+Users run `opencode auth login` (or `/connect` in the TUI) and pick a provider; the
+credentials land in `~/.local/share/opencode/auth.json` and the config in
+`~/.config/opencode/opencode.json`, both on the persistent HOME volume, so both
+survive a restart. GitHub Copilot works this way for anyone with a subscription
+(device flow at `github.com/login/device`).
 
 ## Posit Assistant Configuration
 
@@ -156,62 +146,79 @@ the backend inherits it too. (RStudio's own source cites `~/.Renviron` as how pr
 reach that backend.) This is the same reason `set_renviron.sh` exists in this repo.
 
 `install_posit_assistant.sh` writes a delimited managed block into `$(R RHOME)/etc/Renviron.site`
-with `RSTUDIO_POSIT_AI_PATH` and the provider base URL, and chowns the file to `$NB_USER`.
-The startup hook rewrites that block each start to fill in `OPENAI_COMPATIBLE_API_KEY`, which
-is a runtime secret. Keeping it there rather than in `~/.Renviron` means the key lives on the
-container filesystem and is regenerated every start, instead of persisting in the home volume
-after it is rotated. The hook drops `RSTUDIO_POSIT_AI_PATH` from the block when the user has
-their own copy in `~/.local/share/rstudio/pai/bin`, so an in-IDE update still wins.
+with `RSTUDIO_POSIT_AI_PATH`, and chowns the file to `$NB_USER`. The startup hook rewrites that
+block each start, which keeps it idempotent. The hook drops `RSTUDIO_POSIT_AI_PATH` from the
+block when the user has their own copy in `~/.local/share/rstudio/pai/bin`, so an in-IDE update
+still wins.
 
-The assistant reads `OPENAI_COMPATIBLE_BASE_URL` / `OPENAI_COMPATIBLE_API_KEY` for its
-"OpenAI Compatible" provider, and env vars outrank both `~/.posit/ai/providers.json` and
-the settings UI.
+No provider is configured. The assistant would read `OPENAI_COMPATIBLE_BASE_URL` /
+`OPENAI_COMPATIBLE_API_KEY` for its "OpenAI Compatible" provider, and env vars outrank both
+`~/.posit/ai/providers.json` and the settings UI — which is exactly why neither is set:
+setting them would override whatever the user picks in the UI. Users configure a provider
+there instead, and `~/.posit/assistant/settings.json` is HOME-resident so the choice sticks.
 
-Model choice is *not* env-configurable in the shipping build (the documented
+Note model choice is *not* env-configurable in the shipping build (the documented
 `POSIT_ASSISTANT_SETTINGS_DEFAULT` / `_ENFORCED` variables are not in the 1.1.0 bundle —
-only `POSIT_AI_PROVIDERS_DEFAULT` / `_ENFORCED` for `providers.json`). So the hook seeds
-`~/.posit/assistant/settings.json` on first launch, opencode-style: HOME-resident, user
-edits persist, delete and restart to re-seed.
+only `POSIT_AI_PROVIDERS_DEFAULT` / `_ENFORCED` for `providers.json`).
 
 The relevant RStudio prefs (`assistant`, `chat_provider`) already default to `posit`, so no
 `/etc/rstudio/rstudio-prefs.json` entry is needed. `RSTUDIO_DISABLE_POSIT_ASSISTANT` is the
 off switch if one is ever wanted.
 
-## Kilo Code Configuration
+## AI assistant configuration
 
-Kilo Code v7 is an opencode fork. Its `data`, `state` and `cache` directories are
-HOME-resident (`~/.local/share/kilo`, `~/.local/state/kilo`, `~/.cache/kilo`) and so persist
-on the JupyterHub home volume, but its **config** directory is `$XDG_CONFIG_HOME/kilo` — and
-this image points `XDG_CONFIG_HOME` at `/opt/share/xdg-config`, which lives in the image, not
-the volume. Everything Kilo writes there (custom providers and models added from the UI,
-agents, MCP servers, all of `kilo.json`) was therefore discarded on every restart.
+The image pre-installs three assistants -- opencode (CLI + extension), Kilo Code
+(VS Code extension) and Posit Assistant (the RStudio AI pane) -- and configures
+**none** of them. No provider, no model, no endpoint, no API key. Users set up
+whichever they want from the app's own UI, and the image's job is to make that
+choice survive a container restart.
 
-`install_llms.sh` replaces that directory with a symlink:
+This is deliberate: an earlier version pre-seeded the NRP Nautilus endpoint and
+read `OPENAI_API_KEY` from the environment. Deployments now hand users their own
+keys interactively, so nothing here should depend on a hub-provided secret.
 
-    /opt/share/xdg-config/kilo -> /home/jovyan/.config/kilo
+### Why config needed redirecting at all
 
-so the extension reads and writes the persistent HOME without knowing anything about it.
+opencode and Kilo Code both read their global config from `$XDG_CONFIG_HOME/<app>`,
+and this image points `XDG_CONFIG_HOME` at `/opt/share/xdg-config` so that
+image-baked config is not shadowed by the JupyterHub HOME mount. That directory
+lives in the image, so anything the apps *write* there is discarded on restart --
+which is precisely a user's provider, model, agents and MCP servers. Kilo v7 is an
+opencode fork and keeps the whole of `kilo.json` there.
+
+`install_llms.sh` replaces both with symlinks into the persistent HOME:
+
+    /opt/share/xdg-config/opencode -> /home/jovyan/.config/opencode
+    /opt/share/xdg-config/kilo     -> /home/jovyan/.config/kilo
+
+so each app reads and writes `~/.config/<app>` without knowing anything about it.
 `kilo debug paths` still prints the `/opt/share` path; it resolves into HOME.
 
-The sysadmin template lives at `/opt/share/kilo-template/kilo.json` (outside `$HOME`, since a
-build-time write to `$HOME` is shadowed by the volume mount). The Jupyter startup hook
-`/etc/jupyter/jupyter_server_config.py`:
+Everything else was already HOME-resident and needed no work: `opencode auth
+login` writes to `~/.local/share/opencode`, Kilo's `data`/`state`/`cache` dirs are
+`~/.local/share/kilo`, `~/.local/state/kilo` and `~/.cache/kilo`, and Posit
+Assistant's settings are in `~/.posit/assistant/settings.json`.
 
-1. Re-asserts the symlink — repairing a container whose `/opt/share` predates this change,
-   and moving anything already written to the ephemeral location into HOME first
-2. Copies the template to `~/.config/kilo/kilo.json` if that file does not exist
+### The startup hook
 
-The template uses the same `{env:OPENAI_API_KEY}` syntax as the opencode config (Kilo reads
-the opencode config format verbatim, including `opencode.json` as a legacy global filename),
-so the key is expanded at read time and never written to disk. Delete
-`~/.config/kilo/kilo.json` and restart to re-seed from the current template.
+`/etc/jupyter/jupyter_server_config.py` runs when the Jupyter server starts,
+before anyone reaches code-server. `/etc/jupyter/` is in Jupyter's config search
+path and outside `$HOME`, so it survives the volume mount. It does two things:
 
-`/etc/jupyter/` is in Jupyter's config search path and outside `$HOME`, so the hook itself
-survives JupyterHub volume mounts.
+1. Re-asserts both symlinks -- repairing a container whose `/opt/share` predates
+   this change, and moving anything already written to the ephemeral location
+   into HOME first rather than dropping it.
+2. Writes `RSTUDIO_POSIT_AI_PATH` into R's `Renviron.site`, so RStudio finds the
+   baked-in assistant bundle instead of prompting each user to download it.
 
-Note the earlier Roo Cline wiring (`roo-cline.autoImportSettingsPath` into the code-server
-`settings.json`) has been removed: the installed extension is `kilocode.kilo-code`, and the v7
-rewrite contributes only `kilo-code.new.*` settings — it never read the Roo keys.
+`Renviron.site` is the only channel that reaches `rsession`: rserver hands it a
+curated ~27-variable environment and drops everything else, so nothing exported
+by the Jupyter server arrives. The managed block is rewritten rather than
+appended, which keeps it idempotent. It carries the install path and nothing
+else.
+
+A user-installed assistant under `~/.local/share/rstudio/pai/bin` wins over the
+system one, since `RSTUDIO_POSIT_AI_PATH` would otherwise shadow it.
 
 ## Testing a change before merging
 
@@ -224,8 +231,8 @@ lines for hand-testing.
 
 `smoke-test.sh` also runs locally against any tag (`bash smoke-test.sh rocker-ml:local`,
 pairing with `run.sh`). It asserts R/Python/Jupyter/RStudio/quarto/opencode are present and
-that the Jupyter startup hook actually seeds the opencode, Kilo Code and Posit Assistant config
-when executed with an `OPENAI_API_KEY` in the environment. It does **not** cover anything
+that the Jupyter startup hook keeps the assistant config dirs on the persistent HOME,
+ships nothing pre-configured, and needs no API key. It does **not** cover anything
 GPU (no GPU runners) or anything that needs a browser — the IDE panes still need a human.
 
 Fork PRs are skipped: `GITHUB_TOKEN` is read-only for them, so the push would 403. PR tags

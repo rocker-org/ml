@@ -62,8 +62,8 @@ chmod -R a+rX "$INSTALL_DIR"
 # rserver does NOT pass its own environment to rsession: it builds a curated
 # ~27-variable environment (RS_*/RSTUDIO_*/R_* plus HOME/PATH/USER/LANG/SHELL/
 # LD_LIBRARY_PATH/XDG_CONFIG_HOME) and drops everything else, so anything
-# exported by the Jupyter server -- including RSTUDIO_POSIT_AI_PATH and the
-# provider credentials -- never arrives. /etc/rstudio/env-vars does not help
+# exported by the Jupyter server -- including RSTUDIO_POSIT_AI_PATH -- never
+# arrives. /etc/rstudio/env-vars does not help
 # either; rserver only setenv()s that into its own process.
 #
 # R's Renviron.site is the way through: R putenv()s it into the rsession
@@ -73,10 +73,12 @@ chmod -R a+rX "$INSTALL_DIR"
 # reach it). This is the same reason set_renviron.sh exists in this repo.
 #
 # The file is chowned to the container user so the Jupyter startup hook can
-# refresh the block with the runtime API key, which must not be baked in.
-# Keeping it here rather than in ~/.Renviron means the key lives on the
-# container filesystem and is regenerated every start, instead of persisting
-# in the JupyterHub home volume after it is rotated.
+# rewrite the block on each start.
+#
+# The block carries the install path and nothing else. No provider, base URL or
+# key is baked in: users choose a provider in the assistant's own settings UI,
+# and ~/.posit/assistant/settings.json is on the persistent HOME so the choice
+# survives a restart.
 RENVIRON_SITE="$(R RHOME)/etc/Renviron.site"
 touch "$RENVIRON_SITE"
 cat >> "$RENVIRON_SITE" <<EOF
@@ -84,7 +86,6 @@ cat >> "$RENVIRON_SITE" <<EOF
 # >>> rocker-ml posit-assistant >>>
 # Managed by install_posit_assistant.sh and the Jupyter startup hook.
 RSTUDIO_POSIT_AI_PATH=${INSTALL_DIR}
-OPENAI_COMPATIBLE_BASE_URL=https://ellm.nrp-nautilus.io/v1
 # <<< rocker-ml posit-assistant <<<
 EOF
 chown "${NB_USER:-jovyan}" "$RENVIRON_SITE"
