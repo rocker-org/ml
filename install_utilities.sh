@@ -7,9 +7,7 @@ apt-get update -qq && apt-get -y install \
 locale-gen en_US.UTF-8
 
 # ensure user owns all of /opt/share (e.g. for vscode-plugins)
-# xdg-config: XDG_CONFIG_HOME is set to /opt/share/xdg-config so app configs
-# (goose, code-server, etc.) land outside $HOME and survive JupyterHub mounts
-mkdir -p /opt/share/xdg-config && chown -R ${NB_USER}:users /opt/share
+mkdir -p /opt/share && chown -R ${NB_USER}:users /opt/share
 
 # awscli tool for S3 use
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \

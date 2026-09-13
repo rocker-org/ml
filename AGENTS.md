@@ -88,21 +88,25 @@ We use `/opt/share/` as the base for such files:
 | Path | Purpose |
 |---|---|
 | `/opt/share/code-server/` | VS Code (code-server) extensions — set via `$CODE_EXTENSIONSDIR` |
-| `/opt/share/xdg-config/` | XDG config for apps that respect `$XDG_CONFIG_HOME` |
 
-### XDG_CONFIG_HOME
-`ENV XDG_CONFIG_HOME=/opt/share/xdg-config` is set in both Dockerfiles.
-Apps that follow the XDG Base Directory spec will read/write config here instead of
-`~/.config`, keeping their config outside the JupyterHub volume mount.
-
-**opencode and Kilo Code** respect `XDG_CONFIG_HOME`, but `/opt/share/xdg-config/` is
-image-baked and not on the persistent HOME volume — so config they write there would
-not survive a restart. Both directories are therefore symlinks into `~/.config`; see
-[AI assistant configuration](#ai-assistant-configuration).
+### XDG_CONFIG_HOME is deliberately *not* set
+An earlier version set `ENV XDG_CONFIG_HOME=/opt/share/xdg-config`, to keep goose's
+then pre-seeded config outside the JupyterHub HOME mount. Nothing is pre-seeded now,
+so the redirect only did harm — see
+[AI assistant configuration](#ai-assistant-configuration). Don't reintroduce it: only
+config the *image* writes belongs under `/opt/share`, and config the *apps* write
+belongs in `$HOME`, which is the XDG default.
 
 ## opencode
 
-Installed as both a CLI (`/usr/local/bin/opencode`) and a VS Code extension, with no
+The CLI lives at `/usr/local/bin/opencode`, owned by root. The upstream installer
+hardcodes `$HOME/.opencode/bin` — wiped by the JupyterHub PVC mount over `$HOME`, and
+on nobody's PATH — so `install_llms.sh` moves the binary out. `/usr/local/bin` is
+already on the default PATH for every shell, login or not, root or `jovyan`, so no
+PATH edit, `profile.d` drop-in or shell rc is involved. It also arrives owned by the
+release-build UID 1001 and is chowned to root, like goose's.
+
+Installed as both a CLI and a VS Code extension, with no
 provider configured — see [AI assistant configuration](#ai-assistant-configuration).
 Users run `opencode auth login` (or `/connect` in the TUI) and pick a provider; the
 credentials land in `~/.local/share/opencode/auth.json` and the config in
@@ -177,22 +181,30 @@ This is deliberate: an earlier version pre-seeded the NRP Nautilus endpoint and
 read `OPENAI_API_KEY` from the environment. Deployments now hand users their own
 keys interactively, so nothing here should depend on a hub-provided secret.
 
-### Why config needed redirecting at all
+### Why config needs no redirecting
 
-opencode and Kilo Code both read their global config from `$XDG_CONFIG_HOME/<app>`,
-and this image points `XDG_CONFIG_HOME` at `/opt/share/xdg-config` so that
-image-baked config is not shadowed by the JupyterHub HOME mount. That directory
-lives in the image, so anything the apps *write* there is discarded on restart --
-which is precisely a user's provider, model, agents and MCP servers. Kilo v7 is an
-opencode fork and keeps the whole of `kilo.json` there.
+opencode and Kilo Code both read their global config from `$XDG_CONFIG_HOME/<app>`, and
+the image no longer sets `XDG_CONFIG_HOME` — so both fall back to the XDG
+default of `~/.config/<app>`, which is on the persistent HOME volume. Nothing to
+redirect, symlink or repair.
 
-`install_llms.sh` replaces both with symlinks into the persistent HOME:
+This is a revert. `XDG_CONFIG_HOME=/opt/share/xdg-config` was set so that image-baked
+config would not be shadowed by the JupyterHub HOME mount, back when goose shipped
+pre-seeded with a provider. Once nothing was pre-seeded it bought nothing, and it cost
+two things:
 
-    /opt/share/xdg-config/opencode -> /home/jovyan/.config/opencode
-    /opt/share/xdg-config/kilo     -> /home/jovyan/.config/kilo
+- `/opt/share` is image-baked, so everything the apps *wrote* there — the user's
+  provider, model, agents, MCP servers, and for Kilo (an opencode fork) the whole of
+  `kilo.json` — was discarded on restart.
+- The symlinks added to work around that dangled wherever `~/.config` did not already
+  exist, and `mkdir()` on a dangling symlink reports `EEXIST`. So `opencode` aborted at
+  startup with `EEXIST: file already exists, mkdir '/opt/share/xdg-config/opencode'` —
+  on every `docker run --rm -ti rocker/ml`, and on any JupyterHub session whose HOME
+  volume was fresh. Under Jupyter the startup hook happened to create the target first,
+  which is why this was invisible there and fatal everywhere else.
 
-so each app reads and writes `~/.config/<app>` without knowing anything about it.
-`kilo debug paths` still prints the `/opt/share` path; it resolves into HOME.
+The smoke test now runs `opencode --version` rather than only `command -v opencode`,
+which is what let a binary that was present but non-functional ship.
 
 Everything else was already HOME-resident and needed no work: `opencode auth
 login` writes to `~/.local/share/opencode`, Kilo's `data`/`state`/`cache` dirs are
@@ -203,13 +215,14 @@ Assistant's settings are in `~/.posit/assistant/settings.json`.
 
 `/etc/jupyter/jupyter_server_config.py` runs when the Jupyter server starts,
 before anyone reaches code-server. `/etc/jupyter/` is in Jupyter's config search
-path and outside `$HOME`, so it survives the volume mount. It does two things:
+path and outside `$HOME`, so it survives the volume mount. It does one thing:
+writes `RSTUDIO_POSIT_AI_PATH` into R's `Renviron.site`, so RStudio finds the
+baked-in assistant bundle instead of prompting each user to download it.
 
-1. Re-asserts both symlinks -- repairing a container whose `/opt/share` predates
-   this change, and moving anything already written to the ephemeral location
-   into HOME first rather than dropping it.
-2. Writes `RSTUDIO_POSIT_AI_PATH` into R's `Renviron.site`, so RStudio finds the
-   baked-in assistant bundle instead of prompting each user to download it.
+(It used to re-assert the opencode/kilo config symlinks too. Those are gone, and
+nothing about the assistants' config now depends on the Jupyter server having
+started — which matters because a plain `docker run`, code-server and RStudio all
+reach the CLI without it.)
 
 `Renviron.site` is the only channel that reaches `rsession`: rserver hands it a
 curated ~27-variable environment and drops everything else, so nothing exported

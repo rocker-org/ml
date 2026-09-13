@@ -8,8 +8,6 @@ ENV PYTHONBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 # persistent install for vscode extensions
 ENV CODE_EXTENSIONSDIR=/opt/share/code-server
-# Redirect XDG config out of $HOME so it survives JupyterHub volume mounts
-ENV XDG_CONFIG_HOME=/opt/share/xdg-config
 
 # Set up JupyterLab user
 ARG NB_USER=jovyan
