@@ -44,6 +44,10 @@ check "jupyter runs"            "jupyter --version"
 check "RStudio server installed" "test -x /usr/lib/rstudio-server/bin/rserver"
 check "quarto on PATH"          "command -v quarto"
 check "opencode installed"      "command -v opencode"
+# `command -v` is not enough: opencode used to be on PATH and still die on
+# startup (a dangling $XDG_CONFIG_HOME symlink -> EEXIST). Actually run it.
+check "opencode runs"           "opencode --version"
+check "opencode owned by root"  "[ \"\$(stat -c %U /usr/local/bin/opencode)\" = root ]"
 check "code-server extensions"  "ls /opt/share/code-server | grep -qi kilocode"
 
 # Posit Assistant: RStudio only treats the directory as an install when all
@@ -93,17 +97,17 @@ print(f'resolves to {found}')
 PY
 SCRIPT
 
-# The hook is responsible for keeping assistant config on the persistent HOME.
+# Assistant config must land on the persistent HOME by itself -- no XDG
+# redirect, no symlinks, nothing for the startup hook to repair.
 check_script "assistant config dirs live on the persistent HOME" <<'SCRIPT'
 set -e
+test -z "${XDG_CONFIG_HOME:-}" || { echo "XDG_CONFIG_HOME is set to ${XDG_CONFIG_HOME}"; exit 1; }
 python3 - <<'PY'
-import os, pathlib, runpy
-runpy.run_path('/etc/jupyter/jupyter_server_config.py')
+import pathlib
 home = pathlib.Path.home()
-xdg = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(home / '.config')))
 for app in ('opencode', 'kilo'):
-    link, target = xdg / app, home / '.config' / app
-    assert link.resolve() == target.resolve(), f'{link} -> {link.resolve()}, expected {target}'
+    d = home / '.config' / app
+    assert not d.is_symlink(), f'{d} is a symlink to {d.readlink()}'
 PY
 SCRIPT
 
@@ -122,30 +126,30 @@ renviron = pathlib.Path('/usr/lib/R/etc/Renviron.site').read_text()
 for var in ('OPENAI_COMPATIBLE_BASE_URL', 'OPENAI_COMPATIBLE_API_KEY', 'OPENAI_API_KEY'):
     assert var not in renviron, f'{var} is baked into Renviron.site'
 PY
-grep -rq "ellm.nrp-nautilus.io" /etc/jupyter /opt/share/xdg-config /etc/profile.d 2>/dev/null \
+grep -rq "ellm.nrp-nautilus.io" /etc/jupyter /opt/share /etc/profile.d 2>/dev/null \
     && { echo "NRP endpoint still baked into the image"; exit 1; }
 test ! -e /etc/profile.d/opencode.sh || { echo "stale opencode profile.d remains"; exit 1; }
 SCRIPT
 
-# A config a user writes must survive the hook re-running on the next start.
+# A config a user writes must survive the hook re-running on the next start,
+# and must be on the home volume rather than in the image.
 check_script "user config survives a restart" <<'SCRIPT'
 set -e
 python3 - <<'PY'
-import json, pathlib, runpy
+import json, os, pathlib, runpy
 runpy.run_path('/etc/jupyter/jupyter_server_config.py')
 written = {}
 for app, name in (('opencode', 'opencode.json'), ('kilo', 'kilo.json')):
     # Write through the XDG path, which is what the apps themselves use.
-    import os
     xdg = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(pathlib.Path.home() / '.config')))
     cfg = xdg / app / name
+    cfg.parent.mkdir(parents=True, exist_ok=True)
     cfg.write_text(json.dumps({'model': f'my-provider/{app}-model'}, indent=2))
     written[app] = cfg
 runpy.run_path('/etc/jupyter/jupyter_server_config.py')
 for app, cfg in written.items():
     data = json.loads(cfg.read_text())
     assert data['model'] == f'my-provider/{app}-model', f'{app} config was clobbered: {data}'
-    # And it is really on the home volume, not the image.
     assert str(cfg.resolve()).startswith(str(pathlib.Path.home())), cfg.resolve()
 PY
 SCRIPT

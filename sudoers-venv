@@ -21,14 +21,14 @@
 #    26.04 makes sudo-rs the default /usr/bin/sudo via update-alternatives.
 #    sudo-rs does not implement --preserve-env: it warns and ignores the flag.
 #    Anything that drops root -> ${NB_USER} with `sudo --preserve-env` therefore
-#    loses the environment. In this stack XDG_CONFIG_HOME and CODE_EXTENSIONSDIR
-#    are load-bearing -- they are what keep app config and code-server
-#    extensions outside the JupyterHub $HOME mount -- so losing them silently
-#    relocates both into $HOME. sudo-rs does honour env_keep, so the variables
-#    are listed explicitly instead of replacing Ubuntu's default sudo.
+#    loses the environment. In this stack CODE_EXTENSIONSDIR and VIRTUAL_ENV are
+#    load-bearing -- they are what keep code-server extensions outside the
+#    JupyterHub $HOME mount and point at the venv -- so losing them silently
+#    relocates the extensions into $HOME. sudo-rs does honour env_keep, so the
+#    variables are listed explicitly instead of replacing Ubuntu's default sudo.
 #
 # The zz- filename prefix matters: sudoers.d is read in lexical order and later
 # Defaults win, so this must sort after any other drop-in that sets secure_path.
 # jupyter/docker-stacks' start.sh, for example, generates /etc/sudoers.d/path.
 Defaults secure_path="/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Defaults env_keep += "VIRTUAL_ENV NB_USER NB_UID NB_GID CODE_EXTENSIONSDIR XDG_CONFIG_HOME LD_LIBRARY_PATH PYTHONPATH"
+Defaults env_keep += "VIRTUAL_ENV NB_USER NB_UID NB_GID CODE_EXTENSIONSDIR LD_LIBRARY_PATH PYTHONPATH"
