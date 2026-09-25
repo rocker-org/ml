@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     locales \
     tini \
+    tmux \
     && rm -rf /var/lib/apt/lists/*
 
 # IMPORTANT: All pip installs and the final chown must stay in ONE RUN command.
