@@ -60,6 +60,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     libarrow2300 libparquet2300 libarrow-dataset2300 libarrow-acero2300
 
+# gdal-bin drags in Ubuntu's python3-numpy-dev, whose numpy.pc puts the distro
+# numpy's headers (2.3) on pkg-config. Meson's dependency('numpy') tries
+# pkg-config first, so any meson-built sdist -- shapely >= 2.2 -- compiles against
+# those headers instead of the numpy in its build env, and fails with "implicit
+# declaration of function 'PyDataType_TYPEOBJ'" once the two disagree. Remove the
+# .pc so meson falls through to numpy-config from the build env's own numpy.
+RUN rm -f $(dpkg -L python3-numpy-dev 2>/dev/null | grep '/pkgconfig/numpy\.pc$')
+
 COPY --from=plugin-builder /plugins /tmp/plugins
 RUN PLUGDIR="/usr/lib/$(gcc -print-multiarch)/gdalplugins" && \
     mkdir -p "$PLUGDIR" && mv /tmp/plugins/*.so "$PLUGDIR/" && rmdir /tmp/plugins && \
