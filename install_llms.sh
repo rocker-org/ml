@@ -53,7 +53,8 @@ rm -rf "${HOME}/.opencode"
 # configures no provider and reads no API key.
 mkdir -p /etc/jupyter
 cat > /etc/jupyter/jupyter_server_config.py <<'PYEOF'
-"""Jupyter server startup hook: point RStudio at the baked-in Posit Assistant."""
+"""Jupyter server startup hook: carry settings rsession would otherwise drop
+into R's Renviron.site (the Posit Assistant path, and git's EMAIL fallback)."""
 import os, json, pathlib, logging
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,15 @@ def _setup_posit_assistant():
     lines = [begin, "# Managed by install_posit_assistant.sh and the Jupyter startup hook."]
     if use_system:
         lines.append(f"RSTUDIO_POSIT_AI_PATH={system_install}")
+    # git's EMAIL fallback (image default, or per-user from the hub) reaches
+    # code-server and terminals from the server's environment, but rsession
+    # drops it, so RStudio's Git pane gets it from here. It is still git's
+    # lowest-precedence source: a user's ~/.gitconfig wins over it. The
+    # ${EMAIL-...} form only fills it in when R did not inherit one, so R
+    # started from a terminal keeps its own environment's value.
+    email = os.environ.get("EMAIL", "")
+    if email and not any(c in email for c in '\n"{}$'):
+        lines.append(f"EMAIL=${{EMAIL-{email}}}")
     lines.append(end)
 
     try:

@@ -114,6 +114,54 @@ credentials land in `~/.local/share/opencode/auth.json` and the config in
 survive a restart. GitHub Copilot works this way for anyone with a subscription
 (device flow at `github.com/login/device`).
 
+## gh: expiring tokens
+
+`gh` comes from the cli.github.com apt repo (always the latest release), and
+`install_utilities.sh` fails the build if it lacks `--expiring` (added in v2.103.0).
+Expiring tokens are **not** made the default. gh has no system-wide config tier at
+all -- no `/etc` file, no `XDG_CONFIG_DIRS`, no environment variable for it; its only
+config is `~/.config/gh/config.yml` -- so the only way to default it would be runtime
+code writing into each user's HOME, which this image avoids. Users opt in with
+`gh auth login --expiring` or `gh config set expiring_credentials enabled`, and GitHub
+says it will become gh's default upstream.
+
+The key is `expiring_credentials`. The v2.103.0 release notes also list
+`prefer_expiring_credentials`, the name in the PR that added the feature; the shipped
+binary rejects that name as unknown.
+
+## Git commit identity
+
+The image sets no `user.name` / `user.email` in `/etc/gitconfig`. It used to set
+`Default User <email@example.com>`, which silently stamped every student's commits
+with one shared fake identity. Instead:
+
+- `ENV EMAIL=jovyan@noreply.invalid` in the Dockerfiles. `EMAIL` is git's
+  lowest-precedence source for the email: the environment's `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*`, a repo's `.git/config`, `~/.gitconfig` and `/etc/gitconfig` all
+  win over it. So a user's own config is never overridden, and commits still work on
+  a hub that configures nothing, or in a plain `docker run`. `.invalid` is reserved
+  (RFC 2606) and can never be a real domain.
+- The `jovyan` account's full name is set to `jovyan` (it was the base image's
+  `Ubuntu`). git uses it as `user.name` when none is configured. It must not be
+  empty: an empty full name makes git refuse to commit ("Author identity unknown")
+  even with `EMAIL` set.
+- A hub makes the identity per-user by setting `EMAIL` in the pod environment, e.g.
+  in z2jh `singleuser.extraEnv: {EMAIL: "{username}@noreply.invalid"}`. Kubernetes
+  pod env overrides the image's `ENV`. That is deployment config, not the image's job.
+  Do **not** have a hub set `GIT_AUTHOR_NAME` / `GIT_COMMITTER_NAME`: those outrank
+  `~/.gitconfig` and would override users who set their own name.
+
+The email does not need to be deliverable or linked to a GitHub account, and the
+image deliberately does not look one up from the hub's login data. Users who want
+GitHub credit set their own `user.email`, which then wins.
+
+RStudio: rsession drops `EMAIL` like everything else (see
+[Posit Assistant Configuration](#posit-assistant-configuration)), so it also goes in
+the managed `Renviron.site` block, as `EMAIL=${EMAIL-<value>}`. That form only fills
+it in when R did not inherit one. `install_posit_assistant.sh` writes the image
+default at build time, and the startup hook rewrites it with the server's value, so
+a hub's per-user `EMAIL` reaches RStudio's Git pane too.
+
 ## Posit Assistant Configuration
 
 RStudio 2026.04.0+ ships the AI pane, but not the assistant itself: on first use RStudio
@@ -216,8 +264,10 @@ Assistant's settings are in `~/.posit/assistant/settings.json`.
 `/etc/jupyter/jupyter_server_config.py` runs when the Jupyter server starts,
 before anyone reaches code-server. `/etc/jupyter/` is in Jupyter's config search
 path and outside `$HOME`, so it survives the volume mount. It does one thing:
-writes `RSTUDIO_POSIT_AI_PATH` into R's `Renviron.site`, so RStudio finds the
-baked-in assistant bundle instead of prompting each user to download it.
+rewrites a managed block in R's `Renviron.site` with `RSTUDIO_POSIT_AI_PATH`, so
+RStudio finds the baked-in assistant bundle instead of prompting each user to
+download it, and with git's `EMAIL` fallback (see
+[Git commit identity](#git-commit-identity)).
 
 (It used to re-assert the opencode/kilo config symlinks too. Those are gone, and
 nothing about the assistants' config now depends on the Jupyter server having
@@ -227,8 +277,8 @@ reach the CLI without it.)
 `Renviron.site` is the only channel that reaches `rsession`: rserver hands it a
 curated ~27-variable environment and drops everything else, so nothing exported
 by the Jupyter server arrives. The managed block is rewritten rather than
-appended, which keeps it idempotent. It carries the install path and nothing
-else.
+appended, which keeps it idempotent. It carries the install path and `EMAIL`,
+and nothing else.
 
 A user-installed assistant under `~/.local/share/rstudio/pai/bin` wins over the
 system one, since `RSTUDIO_POSIT_AI_PATH` would otherwise shadow it.
