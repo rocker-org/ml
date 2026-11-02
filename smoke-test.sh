@@ -187,6 +187,27 @@ id=$(git var GIT_AUTHOR_IDENT)
 case "$id" in "Jane Smith <jane@example.org>"*) ;; *) fail "user config lost: $id";; esac
 SCRIPT
 
+# Under JupyterHub the startup hook makes the fallback per-user from
+# JUPYTERHUB_USER, with no hub config; an email-style username keeps only the
+# part before the "@"; and an EMAIL the hub sets itself is left alone.
+check_script "git email per hub user" <<'SCRIPT'
+set -e
+fail() { echo "$*"; exit 1; }
+email_after_hook() {
+    python3 -c 'import os, runpy; runpy.run_path("/etc/jupyter/jupyter_server_config.py"); print(os.environ["EMAIL"])'
+}
+got=$(JUPYTERHUB_USER=jsmith email_after_hook)
+test "$got" = jsmith@noreply.invalid || fail "plain username: $got"
+got=$(JUPYTERHUB_USER=jane@berkeley.edu email_after_hook)
+test "$got" = jane@noreply.invalid || fail "email username: $got"
+got=$(JUPYTERHUB_USER=jsmith EMAIL=hub@example.org email_after_hook)
+test "$got" = hub@example.org || fail "hub EMAIL overridden: $got"
+# ...and the per-user value reaches RStudio sessions.
+JUPYTERHUB_USER=jsmith email_after_hook >/dev/null
+got=$(env -u EMAIL Rscript -e 'cat(Sys.getenv("EMAIL"))')
+test "$got" = jsmith@noreply.invalid || fail "R session EMAIL: $got"
+SCRIPT
+
 if [ "$fail" -ne 0 ]; then
     echo "smoke test FAILED"
     exit 1

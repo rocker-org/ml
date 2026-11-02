@@ -53,8 +53,9 @@ rm -rf "${HOME}/.opencode"
 # configures no provider and reads no API key.
 mkdir -p /etc/jupyter
 cat > /etc/jupyter/jupyter_server_config.py <<'PYEOF'
-"""Jupyter server startup hook: carry settings rsession would otherwise drop
-into R's Renviron.site (the Posit Assistant path, and git's EMAIL fallback)."""
+"""Jupyter server startup hook: make git's EMAIL fallback per-user, and carry
+settings rsession would otherwise drop into R's Renviron.site (the Posit
+Assistant path, and EMAIL)."""
 import os, json, pathlib, logging
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,33 @@ def _setup_posit_assistant():
         existing = head + rest.split(end, 1)[1]
     renviron.write_text(existing.rstrip("\n") + "\n\n" + "\n".join(lines) + "\n")
 
+
+def _per_user_git_email():
+    # The image's ENV EMAIL (jovyan@noreply.invalid) is the same for everyone.
+    # Every JupyterHub sets JUPYTERHUB_USER, so make it per-user here, with no
+    # hub configuration. Only os.environ changes -- nothing is written to disk
+    # -- and code-server, terminals and kernels inherit it from this process.
+    # Must run before _setup_posit_assistant(), which copies EMAIL to R.
+    #
+    # Only the image default is replaced, so an EMAIL the hub sets still wins,
+    # and git ranks EMAIL below any user.email, so ~/.gitconfig wins over both.
+    # Hubs that log in by email (e.g. CILogon) have usernames like
+    # jane@berkeley.edu: keep only the part before the "@", so the address is
+    # valid and the user's real domain is not stamped into every commit.
+    import re
+    user = os.environ.get("JUPYTERHUB_USER", "")
+    image_default = f"{os.environ.get('NB_USER', 'jovyan')}@noreply.invalid"
+    if not user or os.environ.get("EMAIL", "") not in ("", image_default):
+        return
+    local = re.sub(r"[^A-Za-z0-9._+-]", "-", user.split("@", 1)[0]).strip(".-")
+    if local:
+        os.environ["EMAIL"] = f"{local}@noreply.invalid"
+
+
+try:
+    _per_user_git_email()
+except Exception as e:
+    logger.error(f"per-user git EMAIL failed: {e}")
 
 try:
     _setup_posit_assistant()

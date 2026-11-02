@@ -145,10 +145,17 @@ with one shared fake identity. Instead:
   `Ubuntu`). git uses it as `user.name` when none is configured. It must not be
   empty: an empty full name makes git refuse to commit ("Author identity unknown")
   even with `EMAIL` set.
-- A hub makes the identity per-user by setting `EMAIL` in the pod environment, e.g.
-  in z2jh `singleuser.extraEnv: {EMAIL: "{username}@noreply.invalid"}`. Kubernetes
-  pod env overrides the image's `ENV`. That is deployment config, not the image's job.
-  Do **not** have a hub set `GIT_AUTHOR_NAME` / `GIT_COMMITTER_NAME`: those outrank
+- Under JupyterHub the startup hook makes it per-user, with no hub configuration:
+  every hub sets `JUPYTERHUB_USER`, and the hook sets `EMAIL` to
+  `<user>@noreply.invalid` in the Jupyter server's own environment. Nothing is written
+  to disk; code-server, terminals and kernels inherit it from the server process.
+  Usernames that are email addresses (CILogon hubs log in as `jane@berkeley.edu`)
+  keep only the part before the `@`, so the address is valid and the user's real
+  domain is not stamped into every commit. The hook replaces only the image default,
+  so a hub that sets `EMAIL` itself still wins. This is the one piece of runtime code
+  here, and it is in the image because hubs such as the campus datahub cannot be
+  relied on to adopt per-image config.
+- Do **not** have a hub set `GIT_AUTHOR_NAME` / `GIT_COMMITTER_NAME`: those outrank
   `~/.gitconfig` and would override users who set their own name.
 
 The email does not need to be deliverable or linked to a GitHub account, and the
@@ -159,8 +166,8 @@ RStudio: rsession drops `EMAIL` like everything else (see
 [Posit Assistant Configuration](#posit-assistant-configuration)), so it also goes in
 the managed `Renviron.site` block, as `EMAIL=${EMAIL-<value>}`. That form only fills
 it in when R did not inherit one. `install_posit_assistant.sh` writes the image
-default at build time, and the startup hook rewrites it with the server's value, so
-a hub's per-user `EMAIL` reaches RStudio's Git pane too.
+default at build time, and the startup hook rewrites it with the server's value
+(after making that per-user), so RStudio's Git pane gets the same email as VS Code.
 
 ## Posit Assistant Configuration
 
@@ -263,11 +270,13 @@ Assistant's settings are in `~/.posit/assistant/settings.json`.
 
 `/etc/jupyter/jupyter_server_config.py` runs when the Jupyter server starts,
 before anyone reaches code-server. `/etc/jupyter/` is in Jupyter's config search
-path and outside `$HOME`, so it survives the volume mount. It does one thing:
-rewrites a managed block in R's `Renviron.site` with `RSTUDIO_POSIT_AI_PATH`, so
-RStudio finds the baked-in assistant bundle instead of prompting each user to
-download it, and with git's `EMAIL` fallback (see
-[Git commit identity](#git-commit-identity)).
+path and outside `$HOME`, so it survives the volume mount. It does two things:
+
+1. It sets the per-user git `EMAIL` fallback in its own environment (see
+   [Git commit identity](#git-commit-identity)).
+2. It rewrites a managed block in R's `Renviron.site` with `RSTUDIO_POSIT_AI_PATH`,
+   so RStudio finds the baked-in assistant bundle instead of prompting each user to
+   download it, and with that `EMAIL`, which rsession would otherwise drop.
 
 (It used to re-assert the opencode/kilo config symlinks too. Those are gone, and
 nothing about the assistants' config now depends on the Jupyter server having

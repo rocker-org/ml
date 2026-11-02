@@ -17,9 +17,9 @@ ENV USER="${NB_USER}"
 ENV HOME="/home/${NB_USER}"
 # Fallback commit email, so git works on any hub (and in a plain docker run)
 # without a fake identity. EMAIL is git's lowest-precedence source: a user's
-# ~/.gitconfig, a repo's config and /etc/gitconfig all win over it. A hub can
-# make it per-user by setting EMAIL in the pod environment, e.g. z2jh
-# singleuser.extraEnv EMAIL: "{username}@noreply.invalid". See AGENTS.md.
+# ~/.gitconfig, a repo's config and /etc/gitconfig all win over it. Under
+# JupyterHub the startup hook makes it per-user from JUPYTERHUB_USER
+# (<user>@noreply.invalid), unless the hub sets EMAIL itself. See AGENTS.md.
 ENV EMAIL="${NB_USER}@noreply.invalid"
 
 # Set up system-wide Python virtual environment
