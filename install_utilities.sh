@@ -24,14 +24,19 @@ chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
 apt-get update -qq && apt-get install -y gh && \
 rm -rf /var/lib/apt/lists/*
+# The cli.github.com apt repo always serves the latest release. Fail the build
+# rather than ship a gh that predates expiring, auto-refreshing OAuth tokens
+# (v2.103.0). Users opt in with `gh auth login --expiring`; gh has no
+# system-wide config to make that the default from here.
+gh auth login --help | grep -q -- '--expiring' || { echo "gh $(gh --version | head -1) lacks --expiring" >&2; exit 1; }
 
 # optional git config
-git config --system pull.rebase true && \
-# git config --system credential.credentialStore cache && \
-# git config --system credential.cacheOptions "--timeout 30000" && \
+git config --system pull.rebase true
+# git config --system credential.credentialStore cache
+# git config --system credential.cacheOptions "--timeout 30000"
 
-git config --system user.name "Default User"
-git config --system user.email "email@example.com" 
+# No system user.name / user.email: a value here would outrank the EMAIL
+# fallback set in the Dockerfile and per-user by the hub. See AGENTS.md.
 
 # uv install, clean-up
 curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR="/usr/local/bin" sh && rm -rf /home/${NB_USER}/.config/uv

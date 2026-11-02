@@ -86,6 +86,7 @@ cat >> "$RENVIRON_SITE" <<EOF
 # >>> rocker-ml posit-assistant >>>
 # Managed by install_posit_assistant.sh and the Jupyter startup hook.
 RSTUDIO_POSIT_AI_PATH=${INSTALL_DIR}
+EMAIL=\${EMAIL-${EMAIL:-${NB_USER:-jovyan}@noreply.invalid}}
 # <<< rocker-ml posit-assistant <<<
 EOF
 chown "${NB_USER:-jovyan}" "$RENVIRON_SITE"

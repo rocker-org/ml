@@ -15,6 +15,12 @@ ENV NB_USER=${NB_USER}
 ENV NB_UID=1000
 ENV USER="${NB_USER}"
 ENV HOME="/home/${NB_USER}"
+# Fallback commit email, so git works on any hub (and in a plain docker run)
+# without a fake identity. EMAIL is git's lowest-precedence source: a user's
+# ~/.gitconfig, a repo's config and /etc/gitconfig all win over it. A hub can
+# make it per-user by setting EMAIL in the pod environment, e.g. z2jh
+# singleuser.extraEnv EMAIL: "{username}@noreply.invalid". See AGENTS.md.
+ENV EMAIL="${NB_USER}@noreply.invalid"
 ENV LANG=en_US.UTF-8
 
 # Set up system-wide Python virtual environment
@@ -24,8 +30,13 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 USER root
 
 # Ubuntu 26.04 base has ubuntu user/group at UID/GID 1000, rename to jovyan
+# usermod -c: replace the inherited "Ubuntu" full name. git falls back to it
+# for user.name when none is configured, so commits would read "Ubuntu". Not
+# empty: an empty full name makes git refuse to commit ("Author identity
+# unknown") even with EMAIL set.
 RUN groupmod -n ${NB_USER} ubuntu && \
-    usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu
+    usermod -l ${NB_USER} -d /home/${NB_USER} -m ubuntu && \
+    usermod -c "${NB_USER}" ${NB_USER}
 
 # Install Python 3.14 (default in Ubuntu 26.04) and system dependencies
 RUN apt-get update && apt-get install -y \

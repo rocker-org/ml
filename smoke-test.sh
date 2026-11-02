@@ -164,6 +164,29 @@ n=$(grep -c '>>> rocker-ml posit-assistant >>>' /usr/lib/R/etc/Renviron.site)
 test "$n" -eq 1 || { echo "managed block appears $n times"; exit 1; }
 SCRIPT
 
+check "gh supports expiring tokens" "gh auth login --help | grep -q -- --expiring"
+
+# Git identity: no fake system identity, a fallback that lets commits work,
+# a per-user EMAIL from the hub that reaches R, and a user's own config winning.
+check_script "git identity defaults" <<'SCRIPT'
+set -e
+fail() { echo "$*"; exit 1; }
+git config --system --get user.name  && fail "system user.name is set"
+git config --system --get user.email && fail "system user.email is set"
+id=$(git var GIT_AUTHOR_IDENT)
+case "$id" in "jovyan <jovyan@noreply.invalid>"*) ;; *) fail "fallback ident: $id";; esac
+# A hub-set EMAIL reaches RStudio's sessions through Renviron.site.
+export EMAIL=jsmith@noreply.invalid
+python3 -c 'import runpy; runpy.run_path("/etc/jupyter/jupyter_server_config.py")'
+got=$(env -u EMAIL Rscript -e 'cat(Sys.getenv("EMAIL"))')
+test "$got" = "$EMAIL" || fail "R session EMAIL: $got"
+# A user's own config wins over EMAIL.
+git config --global user.name "Jane Smith"
+git config --global user.email jane@example.org
+id=$(git var GIT_AUTHOR_IDENT)
+case "$id" in "Jane Smith <jane@example.org>"*) ;; *) fail "user config lost: $id";; esac
+SCRIPT
+
 if [ "$fail" -ne 0 ]; then
     echo "smoke test FAILED"
     exit 1
